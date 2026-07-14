@@ -191,12 +191,14 @@ await Promise.all(PREVIEW_PRELOAD.map(async p=>{
   }catch(e){console.warn('[preview] preload failed',p,e);}
 }));
 console.info('[Animacy preview]',Object.keys(__BLOB).length,'textures preloaded;',PREVIEW_LAZY.size,'models lazy');
-THREE.DefaultLoadingManager.setURLModifier(u=>{const k=String(u).replace(/^\.\//,'').split('?')[0];return __BLOB[k]||u;});
+const __PVBASE=new URL('.',location.href).href;
+function __pvnorm(u){let x=String(u);if(x.startsWith(__PVBASE))x=x.slice(__PVBASE.length);return x.replace(/^\.\//,'').split('?')[0];}
+THREE.DefaultLoadingManager.setURLModifier(u=>{const k=__pvnorm(u);return __BLOB[k]||u;});
 const __lazyCache={};
 const __origFetch=window.fetch.bind(window);
 window.fetch=async function(input,init){
   const raw=typeof input==='string'?input:((input&&input.url)||'');
-  let k=raw.replace(/^\.\//,'').split('?')[0];
+  let k=__pvnorm(raw);
   if(PREVIEW_ALIAS[k])k=PREVIEW_ALIAS[k];
   if(__BLOB[k]){
     if(init&&String(init.method||'').toUpperCase()==='HEAD')return new Response(null,{status:200});
