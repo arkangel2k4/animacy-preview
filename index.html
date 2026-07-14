@@ -392,13 +392,13 @@ async function buildScatter(id){
   const cfg=SCATTER_CFG[id]; if(!cfg)return; const grp=new THREE.Group(); const rand=(a,b)=>a+Math.random()*(b-a);
   const place=(proto,count,hRange,rMin,rMax)=>{for(let i=0;i<count;i++){const c=proto.clone(true);const r=rMin+Math.pow(Math.random(),0.72)*(rMax-rMin),a=Math.random()*Math.PI*2;c.position.set(Math.cos(a)*r,0,Math.sin(a)*r);c.rotation.y=Math.random()*Math.PI*2;c.scale.setScalar(rand(hRange[0],hRange[1]));anchorObjectToGround(c,0);c.userData={...(c.userData||{}),environmentProtected:true,grounded:true,baseY:c.position.y,baseRotZ:c.rotation.z,windPhase:Math.random()*Math.PI*2,windAmp:0.006+Math.random()*0.014};c.traverse?.(o=>{o.userData.environmentProtected=true;});grp.add(c);}};
   try{
-    if(cfg.set){ // fixed-layout scene set (e.g. the village) — authored positions, no randomness
+    if(cfg.set)try{ // fixed-layout scene set (e.g. the village) — its failure must never kill the scatter
       if(!SET_CACHE[cfg.set])SET_CACHE[cfg.set]=new GLTFLoader().loadAsync(cfg.set);
       const sg=await SET_CACHE[cfg.set]; if(seq!==scatterSeq)return;
       const root=sg.scene.clone(true);
       root.traverse(o=>{o.userData={...(o.userData||{}),environmentProtected:true};if(o.isMesh){o.frustumCulled=true;o.castShadow=false;o.receiveShadow=true;for(const m of(Array.isArray(o.material)?o.material:[o.material])){if(!m)continue;if('metalness' in m)m.metalness=Math.min(m.metalness??0,.15);if('roughness' in m)m.roughness=Math.max(m.roughness??1,.82);}}});
       grp.add(root);
-    }
+    }catch(e){delete SET_CACHE[cfg.set];console.warn('scatter set',e);try{showErr('[world set] '+(e&&e.message||e));}catch(_){}}
     for(const [n,count,h] of cfg.items){const proto=await natureModel(n); if(seq!==scatterSeq)return;const low=n.toLowerCase();const mult=low.includes('grass')||low.includes('clover')?APP_SHARED_CONFIG.environment.grassDensity:low.includes('flower')||low.includes('petal')?APP_SHARED_CONFIG.environment.flowerDensity:low.includes('bush')||low.includes('mushroom')?APP_SHARED_CONFIG.environment.bushDensity:low.includes('pebble')||low.includes('rock')?APP_SHARED_CONFIG.environment.rockDensity:1;place(proto,Math.round(count*mult),h,1.15,6.85);}
     for(const [n,count,h] of (cfg.ring||[])){const proto=await natureModel(n); if(seq!==scatterSeq)return; place(proto,Math.round(count*APP_SHARED_CONFIG.environment.treeDensity),h,5.9,8.9);}
     const vineLeaf=id==='crystal'?0x9cf0ff:id==='blossom'?0x9ee883:id==='snow'?0xcfeef7:id==='sand'?0xa0c78c:0x87d56b;
@@ -408,7 +408,7 @@ async function buildScatter(id){
       const a=i/Math.max(cfg.vines,1)*Math.PI*2+Math.random()*0.28; const r=6.2+Math.random()*2.2;
       vine.position.set(Math.cos(a)*r,1.65+Math.random()*0.9,Math.sin(a)*r); vine.rotation.y=-a+(Math.random()-0.5)*0.45; vine.userData={environmentProtected:true,baseY:vine.position.y,baseRotZ:vine.rotation.z,windPhase:Math.random()*Math.PI*2,windAmp:.018};vine.traverse?.(o=>{o.userData.environmentProtected=true;});grp.add(vine);
     }
-  }catch(e){console.warn('scatter load',e);}
+  }catch(e){console.warn('scatter load',e);try{showErr('[scatter] '+(e&&e.message||e));}catch(_){}}
   if(seq!==scatterSeq)return; WORLD.scatter=grp; scene.add(grp);
 }
 const GROUND_CFG={
