@@ -178,7 +178,7 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
    Small textures preload to blob URLs (sync URL-modifier consumers like TextureLoader).
    Heavy models (VRMs, GLBs) lazy-decode on first fetch — a hero costs nothing until selected. */
 const PREVIEW_PRELOAD=["skies/dawn.jpg","skies/day.jpg","skies/dusk.jpg","skies/mist.jpg","skies/night.jpg","skies/sunset.jpg","environments/skies/aurora-sky.jpg","environments/skies/enchanted-sky.jpg","environments/skies/night-sky.jpg","environments/skies/mist-sky.jpg","environments/pacific-ocean/pacific-ocean-sky.jpg","environments/pacific-ocean/pacific-ocean-normal.png","uni/uni_skin_m_light.jpg","uni/uni_skin_f_light.jpg","grounds/brown_mud_leaves_01.jpg","grounds/coast_sand_01.jpg","grounds/cobblestone_floor_001.jpg","grounds/leafy_grass.jpg","grounds/snow_02.jpg","grounds/runic_flagstone.jpg","outfits/hero1_dawnlight_shoes.png","outfits/hero1_dawnlight_tops.png","outfits/hero1_nightcoat_shoes.png","outfits/hero1_nightcoat_tops.png","outfits/hero2_carnival.png","outfits/hero2_shadow.png","outfits/hero2_shadow_shoes.png","outfits/hero3_runekeeper_bottoms.png","outfits/hero3_runekeeper_shoes.png","outfits/hero3_runekeeper_tops.png","outfits/hero3_starscholar_bottoms.png","outfits/hero3_starscholar_tops.png","outfits/hero4_dawnpetal.png","outfits/hero4_dawnpetal_shoes.png","outfits/hero4_moonlily.png","outfits/hero5_skyranger.png","outfits/hero5_skyranger_shoes.png","outfits/hero5_sunset.png","outfits/hero6_arcanum_bottoms.png","outfits/hero6_arcanum_shoes.png","outfits/hero6_arcanum_tops.png","outfits/hero6_eclipse_bottoms.png","outfits/hero6_eclipse_tops.png","outfits/hero7_autumn.png","outfits/hero7_verdant.png","outfits/hero7_verdant_shoes.png"];
-const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","gear_sword_bronze.glb","gear_axe_bronze.glb","gear_pickaxe_bronze.glb","gear_shield_wooden.glb","pet.glb","pet_obsidian.glb","uni/uni_body_m.glb","uni/uni_body_f.glb","uni/ual1.glb","uni/ual2.glb","uni/hair_buns.glb","uni/hair_long.glb","uni/hair_beard.glb","uni/hair_buzzedfemale.glb","pets/pet_dragon_evolved.glb","pets/pet_ghost.glb","pets/pet_goleling.glb","pets/pet_alpaking.glb","pets/pet_armabee.glb","pets/pet_squidle.glb","pets/pet_mushnub.glb","pets/pet_hywirl.glb","pets/pet_dragon.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
+const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","gear_sword_bronze.glb","gear_axe_bronze.glb","gear_pickaxe_bronze.glb","gear_shield_wooden.glb","pet.glb","pet_obsidian.glb","uni/uni_body_m.glb","uni/uni_body_f.glb","uni/ual1.glb","uni/ual2.glb","uni/hair_buns.glb","uni/hair_long.glb","uni/hair_beard.glb","uni/hair_buzzedfemale.glb","uni/uni_outfit_m_peasant.glb","uni/uni_outfit_f_peasant.glb","uni/uni_outfit_m_ranger.glb","uni/uni_outfit_f_ranger.glb","uni/uni_outfit_m_ranger_runic.glb","uni/uni_outfit_f_ranger_runic.glb","pets/pet_dragon_evolved.glb","pets/pet_ghost.glb","pets/pet_goleling.glb","pets/pet_alpaking.glb","pets/pet_armabee.glb","pets/pet_squidle.glb","pets/pet_mushnub.glb","pets/pet_hywirl.glb","pets/pet_dragon.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
 const PREVIEW_ALIAS={'landscapes/grassy-field/grassy-field-mobile.glb':'landscapes/grassy-field/grassy-field-balanced.glb'};
 const __BLOB={};
 function __decode(t){const b=atob(t.trim());const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
@@ -944,11 +944,20 @@ function setStreetwearLayers(showStreetwear){
     }
   });
 }
-function markOutfitPicks(){document.querySelectorAll('#outfitRow .pbtn').forEach(b=>b.classList.toggle('on',(b.dataset.outfit||'')===currentOutfit));}
+function markOutfitPicks(){
+  if(UNI.active){document.querySelectorAll('#outfitRow .pbtn').forEach(b=>b.classList.toggle('on',b.dataset.outfit===(UNI.outfit||'')));return;}document.querySelectorAll('#outfitRow .pbtn').forEach(b=>b.classList.toggle('on',(b.dataset.outfit||'')===currentOutfit));}
 function buildOutfitRow(){
   const row=document.getElementById('outfitRow');if(!row)return;
   row.querySelectorAll('.pbtn').forEach(b=>b.remove());
   const heroUrl=(CHARACTERS[charIdx]&&CHARACTERS[charIdx].url)||'hero.vrm';
+  if(UNI.active){
+    const udefs=UNI_OUTFIT_DEFS[UNI.gender]||[];
+    const umk=(id,label)=>{const b=document.createElement('button');b.className='pbtn';b.dataset.outfit=id;b.textContent=label;b.addEventListener('click',()=>uniApplyOutfit(id));row.appendChild(b);};
+    umk('','🦸 suit');
+    for(const d of udefs)umk(d.id,d.label);
+    markOutfitPicks();
+    return;
+  }
   const defs=OUTFIT_DEFS[heroUrl]||[];
   const mk=(id,label)=>{const b=document.createElement('button');b.className='pbtn';b.dataset.outfit=id;b.textContent=label;b.addEventListener('click',()=>applyOutfit(id));row.appendChild(b);};
   mk('','👤 default');
@@ -1213,6 +1222,40 @@ function updatePet(dt,now){
    + optional hairstyle swap (origin-at-0 pieces parented to the Head bone). */
 const UNI={active:false,scene:null,acts:{},cur:null,curName:null,base:null,baseYaw:0,oneshotUntil:0,libs:null,token:0};
 const UNI_TAG2CLIP={greet_wave:['Idle_Rail_Call',1],wave_goodbye:['Idle_Rail_Call',1],excited_jump:['Jump_Start',1],laugh:['Yes',1],giggle:['Yes',1],nod:['Yes',1],shake_head:['Idle_No_Loop',1],think_chin:['Idle_FoldArms_Loop',0,2.6],shrug:['Idle_No_Loop',1],cheer:['Chest_Open',1],clap:['Chest_Open',1],dance:['Dance_Loop',0,4.2],sad_slump:['Idle_FoldArms_Loop',0,2.6],hero_pose:['Chest_Open',1],flex:['Chest_Open',1],twirl:['Roll',1],lean_in:['Interact',1],bow:['Interact',1],startle:['Hit_Chest',1],pet_the_pet:['Fixing_Kneeling',1],spell_cast:['Spell_Simple_Shoot',1],sword_slash:['Sword_Attack',1],backflip:['Roll',1],float_meditate:['Sitting_Idle_Loop',0,3.4],stretch:['Chest_Open',1],point_forward:['Interact',1],walk:['Jog_Fwd_Loop',0,2.6],run:['Sprint_Loop',0,2.4],sneak:['Crouch_Idle_Loop',0,2.6]};
+const UNI_OUTFIT_DEFS={
+ m:[{id:'peasant',label:'🌾 peasant',file:'uni/uni_outfit_m_peasant.glb'},{id:'ranger',label:'🏹 ranger',file:'uni/uni_outfit_m_ranger.glb'},{id:'ranger_runic',label:'🌘 runic ranger',file:'uni/uni_outfit_m_ranger_runic.glb'}],
+ f:[{id:'peasant',label:'🌾 peasant',file:'uni/uni_outfit_f_peasant.glb'},{id:'ranger',label:'🏹 ranger',file:'uni/uni_outfit_f_ranger.glb'},{id:'ranger_runic',label:'🌘 runic ranger',file:'uni/uni_outfit_f_ranger_runic.glb'}]
+};
+async function uniApplyOutfit(id){
+  if(!UNI.active||!UNI.scene)return;
+  if(UNI.outfitGrp){UNI.scene.remove(UNI.outfitGrp);UNI.outfitGrp=null;}
+  UNI.outfit=id||'';
+  try{localStorage.setItem('an_uni_outfit_'+(UNI.gender||'m'),UNI.outfit);}catch(e){}
+  markOutfitPicks();
+  if(!id)return;
+  const def=(UNI_OUTFIT_DEFS[UNI.gender]||[]).find(d=>d.id===id);if(!def)return;
+  const my=UNI.token;
+  try{
+    const g=await new GLTFLoader().loadAsync(def.file);
+    if(my!==UNI.token||UNI.outfit!==id)return;
+    const bones={};UNI.scene.traverse(o=>{if(o.isBone)bones[o.name]=o;});
+    const grp=new THREE.Group();grp.name='UniOutfit';
+    g.scene.traverse(o=>{
+      if(o.isSkinnedMesh){
+        const bs=o.skeleton.bones.map(b=>bones[b.name]);
+        if(bs.every(Boolean)){
+          const m=o.clone();
+          m.skeleton=new THREE.Skeleton(bs,o.skeleton.boneInverses);
+          m.frustumCulled=false;m.castShadow=false;m.receiveShadow=false;
+          m.userData.environmentProtected=true;
+          for(const mt of (Array.isArray(m.material)?m.material:[m.material])){if(mt&&'metalness' in mt)mt.metalness=0;if(mt&&'roughness' in mt)mt.roughness=Math.min(mt.roughness??1,.9);}
+          grp.add(m);
+        }
+      }
+    });
+    UNI.scene.add(grp);UNI.outfitGrp=grp;
+  }catch(e){console.warn('uni outfit failed',def.file,e);}
+}
 function uniPlay(name,once,hold){
   const a=UNI.acts[name];if(!a)return false;
   a.reset();a.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,once?1:Infinity);a.clampWhenFinished=false;a.play();
@@ -1278,7 +1321,8 @@ async function loadUniversalHero(hc){
       }
     }
     scene.add(root);
-    UNI.scene=root;UNI.active=true;
+    UNI.scene=root;UNI.active=true;UNI.outfitGrp=null;UNI.outfit='';
+    UNI.gender=(hc.url||hc.file).includes('_f')?'f':'m';
     mixer=new THREE.AnimationMixer(root);
     UNI.acts={};for(const n in clips){try{UNI.acts[n]=mixer.clipAction(clips[n]);}catch(e){}}
     UNI.cur=null;UNI.base=null;uniPlay('Idle_Loop',false);UNI.base='Idle_Loop';
@@ -1286,6 +1330,7 @@ async function loadUniversalHero(hc){
     renderer.compile(scene,camera);
     try{buildOutfitRow();}catch(e){}
     currentOutfit='';
+    try{const so=localStorage.getItem('an_uni_outfit_'+UNI.gender);if(so)uniApplyOutfit(so);}catch(e){}
     if(hc&&(hc.persona||hc.name)){
       persona.name=hc.persona||hc.name;if(hc.archetype)persona.archetype=hc.archetype;
       persona.petName=(hc.pet||'Ember')+' the baby dragon';
