@@ -399,8 +399,12 @@ async function buildScatter(id){
       root.traverse(o=>{o.userData={...(o.userData||{}),environmentProtected:true};if(o.isMesh){o.frustumCulled=true;o.castShadow=false;o.receiveShadow=true;for(const m of(Array.isArray(o.material)?o.material:[o.material])){if(!m)continue;if('metalness' in m)m.metalness=Math.min(m.metalness??0,.15);if('roughness' in m)m.roughness=Math.max(m.roughness??1,.82);}}});
       grp.add(root);
     }catch(e){delete SET_CACHE[cfg.set];console.warn('scatter set',e);try{showErr('[world set] '+(e&&e.message||e));}catch(_){}}
-    for(const [n,count,h] of cfg.items){const proto=await natureModel(n); if(seq!==scatterSeq)return;const low=n.toLowerCase();const mult=low.includes('grass')||low.includes('clover')?APP_SHARED_CONFIG.environment.grassDensity:low.includes('flower')||low.includes('petal')?APP_SHARED_CONFIG.environment.flowerDensity:low.includes('bush')||low.includes('mushroom')?APP_SHARED_CONFIG.environment.bushDensity:low.includes('pebble')||low.includes('rock')?APP_SHARED_CONFIG.environment.rockDensity:1;place(proto,Math.round(count*mult),h,1.15,6.85);}
-    for(const [n,count,h] of (cfg.ring||[])){const proto=await natureModel(n); if(seq!==scatterSeq)return; place(proto,Math.round(count*APP_SHARED_CONFIG.environment.treeDensity),h,5.9,8.9);}
+    // load every model in parallel (sequential awaits made ground swaps crawl once the set grew)
+    const ring=cfg.ring||[];
+    const protos=await Promise.all([...cfg.items,...ring].map(([n])=>natureModel(n)));
+    if(seq!==scatterSeq)return;
+    cfg.items.forEach(([n,count,h],i)=>{const low=n.toLowerCase();const mult=low.includes('grass')||low.includes('clover')?APP_SHARED_CONFIG.environment.grassDensity:low.includes('flower')||low.includes('petal')?APP_SHARED_CONFIG.environment.flowerDensity:low.includes('bush')||low.includes('mushroom')?APP_SHARED_CONFIG.environment.bushDensity:low.includes('pebble')||low.includes('rock')?APP_SHARED_CONFIG.environment.rockDensity:1;place(protos[i],Math.round(count*mult),h,1.15,6.85);});
+    ring.forEach(([n,count,h],i)=>{place(protos[cfg.items.length+i],Math.round(count*APP_SHARED_CONFIG.environment.treeDensity),h,5.9,8.9);});
     const vineLeaf=id==='crystal'?0x9cf0ff:id==='blossom'?0x9ee883:id==='snow'?0xcfeef7:id==='sand'?0xa0c78c:0x87d56b;
     const vineBloom=id==='blossom'?0xffc1df:id==='crystal'?0xc2f8ff:(id==='field'||id==='grass')?0xffd29c:null;
     for(let i=0;i<Math.round((cfg.vines||0)*APP_SHARED_CONFIG.environment.vineDensity);i++){
