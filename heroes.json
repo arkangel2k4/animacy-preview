@@ -1,0 +1,9 @@
+[
+  {"file": "hero.vrm",  "name": "Kaelen", "archetype": "champion",   "tagline": "Bold Champion",       "pet": "Ember", "petTint": "#2DD4BF"},
+  {"file": "hero2.vrm", "name": "Wren",   "archetype": "trickster",  "tagline": "Chaotic Trickster",   "pet": "Onyx",  "petTint": "#8B5CF6"},
+  {"file": "hero3.vrm", "name": "Orin",   "archetype": "mentor",     "tagline": "Wise Mentor",         "pet": "Rune",  "petTint": "#A9743C"},
+  {"file": "hero4.vrm", "name": "Liora",  "archetype": "healer",     "tagline": "Gentle Healer",       "pet": "Bloom", "petTint": "#F2A6B8"},
+  {"file": "hero5.vrm", "name": "Niko",   "archetype": "adventurer", "tagline": "Cheerful Adventurer", "pet": "Volt",  "petTint": "#3FA7E0"},
+  {"file": "hero6.vrm", "name": "Mira",   "archetype": "mentor",     "tagline": "Arcane Prodigy",      "pet": "Nova",  "petTint": "#B3323C"},
+  {"file": "hero7.vrm", "name": "Fern",   "archetype": "healer",     "tagline": "Forest Spirit",       "pet": "Acorn", "petTint": "#6B8F3D"}
+]
