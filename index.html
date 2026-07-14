@@ -1636,6 +1636,9 @@ const prefS=(()=>{try{return localStorage.getItem('an_sky');}catch(e){return nul
 setScene(curScene);
 if(prefG&&GROUND_CFG[prefG])setGround(prefG); // user's pinned world wins over the scene pair
 if(prefS&&SKY_CFG[prefS])setSky(prefS);
+// preview deep-links: ?sky= & ?ground= override everything
+const skyQ=Q.get('sky'); if(skyQ&&SKY_CFG[skyQ])setSky(skyQ);
+const grdQ=Q.get('ground'); if(grdQ&&GROUND_CFG[grdQ])setGround(grdQ);
 loadAppSharedDefaults(); /* preview: lab sync off */
 if(Q.get('zoom')){const z=clamp(parseFloat(Q.get('zoom'))||CAMERA_DEFAULT_DISTANCE,controls.minDistance,controls.maxDistance);camera.position.set(0,1.2,z);controls.update();}
 loadPet(); // non-blocking — dragon appears when ready
@@ -1650,6 +1653,10 @@ loadCharacter(parseInt(Q.get('char')||'0')||0).then(()=>{
   GEAR.tier=parseInt(localStorage.getItem('an_tier')||'0')||0;
   const sg=localStorage.getItem('an_gear');
   if(sg&&GEAR_DEFS[sg])equipGear(sg);
+  // preview deep-links: ?outfit= ?gear= ?tier= apply after the hero lands
+  const oq=Q.get('outfit'); if(oq!==null)setTimeout(()=>{try{applyOutfit(oq,false);}catch(e){}},500);
+  const gq=Q.get('gear'); if(gq&&GEAR_DEFS[gq])setTimeout(()=>{try{equipGear(gq);}catch(e){}},700);
+  const tq=Q.get('tier'); if(tq!==null)setTimeout(()=>{try{applyEnchant(parseInt(tq)||0);}catch(e){}},900);
   const t=Q.get('test');
   if(t)setTimeout(()=>{fireBody(t);fireFace('happy');},900);
   setTimeout(()=>{showCaption("I’m here. What shall we do?");fireBody('greet_wave');fireFace('grin');hideCaptionSoon();},700);
