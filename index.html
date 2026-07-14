@@ -178,7 +178,7 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
    Small textures preload to blob URLs (sync URL-modifier consumers like TextureLoader).
    Heavy models (VRMs, GLBs) lazy-decode on first fetch — a hero costs nothing until selected. */
 const PREVIEW_PRELOAD=["skies/dawn.jpg","skies/day.jpg","skies/dusk.jpg","skies/mist.jpg","skies/night.jpg","skies/sunset.jpg","environments/skies/aurora-sky.jpg","environments/skies/enchanted-sky.jpg","environments/skies/night-sky.jpg","environments/skies/mist-sky.jpg","environments/pacific-ocean/pacific-ocean-sky.jpg","environments/pacific-ocean/pacific-ocean-normal.png","grounds/brown_mud_leaves_01.jpg","grounds/coast_sand_01.jpg","grounds/cobblestone_floor_001.jpg","grounds/leafy_grass.jpg","grounds/snow_02.jpg","grounds/runic_flagstone.jpg","outfits/hero1_dawnlight_shoes.png","outfits/hero1_dawnlight_tops.png","outfits/hero1_nightcoat_shoes.png","outfits/hero1_nightcoat_tops.png","outfits/hero2_carnival.png","outfits/hero2_shadow.png","outfits/hero2_shadow_shoes.png","outfits/hero3_runekeeper_bottoms.png","outfits/hero3_runekeeper_shoes.png","outfits/hero3_runekeeper_tops.png","outfits/hero3_starscholar_bottoms.png","outfits/hero3_starscholar_tops.png","outfits/hero4_dawnpetal.png","outfits/hero4_dawnpetal_shoes.png","outfits/hero4_moonlily.png","outfits/hero5_skyranger.png","outfits/hero5_skyranger_shoes.png","outfits/hero5_sunset.png","outfits/hero6_arcanum_bottoms.png","outfits/hero6_arcanum_shoes.png","outfits/hero6_arcanum_tops.png","outfits/hero6_eclipse_bottoms.png","outfits/hero6_eclipse_tops.png","outfits/hero7_autumn.png","outfits/hero7_verdant.png","outfits/hero7_verdant_shoes.png"];
-const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","pet.glb","pet_obsidian.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb"]);
+const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","pet.glb","pet_obsidian.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
 const PREVIEW_ALIAS={'landscapes/grassy-field/grassy-field-mobile.glb':'landscapes/grassy-field/grassy-field-balanced.glb'};
 const __BLOB={};
 function __decode(t){const b=atob(t.trim());const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
@@ -341,13 +341,15 @@ const SKY_CFG={
   enchanted:{file:'skies/dusk.jpg',   fog:'#4f4769', part:0xffd7ff, hemi:[0xeed8ff,0x29223f,1.06], dir:[0xf0d5ff,0.96], tint:0xe7dfff, cloud:[0.30,0xfafdff], haze:'#c7a6ff'}
 };
 const SCATTER_CFG={
-  grass:{items:[['Grass_Common_Tall',34,[0.32,0.54]],['Grass_Wispy_Tall',26,[0.34,0.54]],['Clover_1',18,[0.10,0.22]],['Flower_3_Group',16,[0.30,0.46]],['Fern_1',10,[0.24,0.38]],['Bush_Common',7,[0.42,0.66]]],ring:[['CommonTree_1',5,[3.0,4.0]],['CommonTree_3',4,[2.8,3.6]],['TwistedTree_1',2,[2.7,3.4]]],vines:14},
-  field:{items:[['Grass_Common_Tall',18,[0.28,0.46]],['Grass_Wispy_Tall',18,[0.28,0.44]],['Flower_3_Group',10,[0.28,0.42]],['Fern_1',8,[0.22,0.34]],['Bush_Common',5,[0.40,0.60]],['Pebble_Round_1',8,[0.07,0.14]],['RockPath_Round_Small_1',7,[0.18,0.32]]],ring:[['TwistedTree_1',4,[2.6,3.5]],['CommonTree_3',4,[2.5,3.3]],['CommonTree_1',2,[2.8,3.7]]],vines:10},
-  stone:{items:[['Grass_Common_Tall',10,[0.20,0.34]],['Grass_Wispy_Tall',12,[0.20,0.34]],['Flower_3_Group',7,[0.24,0.36]],['Fern_1',6,[0.18,0.28]],['Bush_Common',4,[0.32,0.46]],['Pebble_Square_2',10,[0.07,0.14]],['Pebble_Round_1',8,[0.06,0.12]],['RockPath_Round_Small_1',6,[0.18,0.26]]],ring:[['CommonTree_3',3,[2.4,3.2]],['TwistedTree_1',3,[2.4,3.2]]],vines:8},
-  snow: {items:[['Grass_Wispy_Tall',10,[0.18,0.28]],['Fern_1',6,[0.18,0.26]],['RockPath_Round_Small_1',8,[0.20,0.36]],['Pebble_Round_1',8,[0.08,0.15]],['Bush_Common',3,[0.26,0.40]]],ring:[['TwistedTree_1',4,[2.5,3.3]],['CommonTree_3',2,[2.3,3.0]]],vines:5},
-  sand: {items:[['Grass_Wispy_Tall',12,[0.18,0.30]],['Fern_1',6,[0.18,0.26]],['Bush_Common',4,[0.28,0.42]],['Pebble_Round_1',12,[0.07,0.14]],['RockPath_Round_Small_1',8,[0.20,0.36]],['Flower_3_Group',4,[0.22,0.32]]],ring:[['CommonTree_1',2,[2.6,3.4]],['TwistedTree_1',3,[2.3,3.0]]],vines:6},
-  blossom:{items:[['Grass_Common_Tall',28,[0.30,0.50]],['Grass_Wispy_Tall',20,[0.28,0.46]],['Flower_3_Group',22,[0.30,0.48]],['Clover_1',18,[0.10,0.22]],['Fern_1',10,[0.22,0.34]],['Bush_Common',8,[0.40,0.62]]],ring:[['CommonTree_1',4,[2.8,3.8]],['CommonTree_3',4,[2.6,3.4]],['TwistedTree_1',3,[2.4,3.2]]],vines:18},
-  crystal:{items:[['Grass_Common_Tall',12,[0.18,0.32]],['Grass_Wispy_Tall',12,[0.18,0.30]],['Flower_3_Group',7,[0.22,0.34]],['Fern_1',6,[0.18,0.28]],['Bush_Common',4,[0.28,0.44]],['Pebble_Square_2',12,[0.08,0.16]],['RockPath_Round_Small_1',8,[0.18,0.30]]],ring:[['TwistedTree_1',5,[2.4,3.3]],['CommonTree_3',3,[2.2,3.0]]],vines:10}
+  grass:{items:[['Grass_Large',26,[0.30,0.52]],['Grass_Small',22,[0.22,0.38]],['Grass_Wispy_Tall',18,[0.32,0.52]],['Clover_1',16,[0.10,0.22]],['Flower_1_Clump',12,[0.28,0.44]],['Flower_5_Clump',8,[0.26,0.40]],['Fern_1',9,[0.24,0.38]],['Bush',6,[0.42,0.66]],['Bush_Flowers',4,[0.44,0.66]],['Mushroom_Common',4,[0.10,0.20]]],ring:[['MapleTree_2',4,[3.0,4.0]],['BirchTree_2',3,[3.0,3.9]],['Pine_1',2,[3.1,4.1]]],vines:14},
+  field:{items:[['Grass_Small',16,[0.22,0.40]],['Grass_Wispy_Tall',16,[0.26,0.44]],['Flower_2_Clump',8,[0.26,0.40]],['Fern_1',7,[0.22,0.34]],['Bush_Small',5,[0.34,0.52]],['Pebble_Round_1',8,[0.07,0.14]],['Rock_Medium_1',5,[0.22,0.40]],['Mushroom_Laetiporus',3,[0.12,0.22]]],ring:[['MapleTree_4',4,[2.7,3.6]],['DeadTree_5',2,[2.6,3.4]],['BirchTree_2',2,[2.8,3.7]]],vines:10},
+  stone:{items:[['Grass_Small',10,[0.18,0.32]],['Grass_Wispy_Tall',10,[0.20,0.34]],['Flower_1_Clump',6,[0.22,0.34]],['Fern_1',6,[0.18,0.28]],['Bush_Small',4,[0.28,0.42]],['Pebble_Square_2',10,[0.07,0.14]],['Pebble_Round_1',8,[0.06,0.12]],['Rock_Medium_2',6,[0.20,0.36]]],ring:[['Pine_3',3,[2.6,3.4]],['DeadTree_2',2,[2.5,3.3]],['TwistedTree_1',2,[2.4,3.2]]],vines:8},
+  snow: {items:[['Grass_Wispy_Tall',9,[0.18,0.28]],['Fern_1',5,[0.18,0.26]],['Rock_Medium_1',6,[0.20,0.36]],['Pebble_Round_1',8,[0.08,0.15]],['Bush_Small',3,[0.26,0.40]]],ring:[['Pine_1',4,[2.8,3.7]],['Pine_3',3,[2.6,3.5]],['DeadTree_2',1,[2.5,3.2]]],vines:5},
+  sand: {items:[['Grass_Wispy_Tall',10,[0.18,0.30]],['Fern_1',5,[0.18,0.26]],['Bush_Small',4,[0.26,0.40]],['Pebble_Round_1',12,[0.07,0.14]],['Rock_Medium_2',6,[0.20,0.36]],['Flower_2_Clump',3,[0.20,0.30]]],ring:[['DeadTree_5',2,[2.4,3.2]],['TwistedTree_1',3,[2.3,3.0]]],vines:6},
+  blossom:{items:[['Grass_Large',22,[0.28,0.48]],['Grass_Small',16,[0.20,0.36]],['Petal_2',18,[0.16,0.30]],['Flower_1_Clump',14,[0.28,0.46]],['Flower_5_Clump',10,[0.26,0.42]],['Clover_1',14,[0.10,0.22]],['Bush_Flowers',7,[0.40,0.62]]],ring:[['MapleTree_2',4,[2.9,3.9]],['MapleTree_4',3,[2.7,3.6]],['BirchTree_2',3,[2.7,3.5]]],vines:18},
+  crystal:{items:[['Grass_Small',10,[0.16,0.30]],['Grass_Wispy_Tall',10,[0.18,0.30]],['Flower_5_Clump',6,[0.22,0.34]],['Fern_1',6,[0.18,0.28]],['Mushroom_Common',6,[0.12,0.24]],['Pebble_Square_2',12,[0.08,0.16]],['Rock_Medium_2',7,[0.18,0.32]]],ring:[['DeadTree_2',4,[2.5,3.4]],['TwistedTree_1',3,[2.3,3.2]]],vines:10},
+  runic:{items:[['Grass_Wispy_Tall',8,[0.18,0.30]],['Fern_1',6,[0.18,0.28]],['Mushroom_Laetiporus',5,[0.12,0.24]],['Pebble_Square_2',10,[0.08,0.16]],['Rock_Medium_1',6,[0.20,0.36]],['RockPath_Round_Small_1',5,[0.18,0.30]]],ring:[['DeadTree_2',3,[2.6,3.5]],['DeadTree_5',2,[2.4,3.2]],['TwistedTree_1',3,[2.4,3.3]]],vines:9},
+  village:{set:'landscapes/village/village-set.glb',items:[['Grass_Small',14,[0.20,0.34]],['Grass_Large',10,[0.26,0.44]],['Flower_1_Clump',8,[0.26,0.40]],['Clover_1',10,[0.10,0.20]],['Petal_2',5,[0.16,0.26]],['Bush',3,[0.38,0.56]]],ring:[['MapleTree_2',2,[2.9,3.7]],['BirchTree_2',2,[2.8,3.6]]],vines:8}
 };
 function makeVineCluster(stemHex=0x4f7f45,leafHex=0x8ecf78,flowerHex=null){
   const g=new THREE.Group();
@@ -373,6 +375,7 @@ function makeVineCluster(stemHex=0x4f7f45,leafHex=0x8ecf78,flowerHex=null){
   return g;
 }
 const NATURE_CACHE=Object.create(null);
+const SET_CACHE=Object.create(null);
 async function natureModel(n){
   if(NATURE_CACHE[n])return NATURE_CACHE[n];
   const g=await new GLTFLoader().loadAsync('nature/'+n+'.glb');
@@ -389,7 +392,14 @@ async function buildScatter(id){
   const cfg=SCATTER_CFG[id]; if(!cfg)return; const grp=new THREE.Group(); const rand=(a,b)=>a+Math.random()*(b-a);
   const place=(proto,count,hRange,rMin,rMax)=>{for(let i=0;i<count;i++){const c=proto.clone(true);const r=rMin+Math.pow(Math.random(),0.72)*(rMax-rMin),a=Math.random()*Math.PI*2;c.position.set(Math.cos(a)*r,0,Math.sin(a)*r);c.rotation.y=Math.random()*Math.PI*2;c.scale.setScalar(rand(hRange[0],hRange[1]));anchorObjectToGround(c,0);c.userData={...(c.userData||{}),environmentProtected:true,grounded:true,baseY:c.position.y,baseRotZ:c.rotation.z,windPhase:Math.random()*Math.PI*2,windAmp:0.006+Math.random()*0.014};c.traverse?.(o=>{o.userData.environmentProtected=true;});grp.add(c);}};
   try{
-    for(const [n,count,h] of cfg.items){const proto=await natureModel(n); if(seq!==scatterSeq)return;const low=n.toLowerCase();const mult=low.includes('grass')||low.includes('clover')?APP_SHARED_CONFIG.environment.grassDensity:low.includes('flower')?APP_SHARED_CONFIG.environment.flowerDensity:low.includes('bush')?APP_SHARED_CONFIG.environment.bushDensity:low.includes('pebble')||low.includes('rock')?APP_SHARED_CONFIG.environment.rockDensity:1;place(proto,Math.round(count*mult),h,1.15,6.85);}
+    if(cfg.set){ // fixed-layout scene set (e.g. the village) — authored positions, no randomness
+      if(!SET_CACHE[cfg.set])SET_CACHE[cfg.set]=new GLTFLoader().loadAsync(cfg.set);
+      const sg=await SET_CACHE[cfg.set]; if(seq!==scatterSeq)return;
+      const root=sg.scene.clone(true);
+      root.traverse(o=>{o.userData={...(o.userData||{}),environmentProtected:true};if(o.isMesh){o.frustumCulled=true;o.castShadow=false;o.receiveShadow=true;for(const m of(Array.isArray(o.material)?o.material:[o.material])){if(!m)continue;if('metalness' in m)m.metalness=Math.min(m.metalness??0,.15);if('roughness' in m)m.roughness=Math.max(m.roughness??1,.82);}}});
+      grp.add(root);
+    }
+    for(const [n,count,h] of cfg.items){const proto=await natureModel(n); if(seq!==scatterSeq)return;const low=n.toLowerCase();const mult=low.includes('grass')||low.includes('clover')?APP_SHARED_CONFIG.environment.grassDensity:low.includes('flower')||low.includes('petal')?APP_SHARED_CONFIG.environment.flowerDensity:low.includes('bush')||low.includes('mushroom')?APP_SHARED_CONFIG.environment.bushDensity:low.includes('pebble')||low.includes('rock')?APP_SHARED_CONFIG.environment.rockDensity:1;place(proto,Math.round(count*mult),h,1.15,6.85);}
     for(const [n,count,h] of (cfg.ring||[])){const proto=await natureModel(n); if(seq!==scatterSeq)return; place(proto,Math.round(count*APP_SHARED_CONFIG.environment.treeDensity),h,5.9,8.9);}
     const vineLeaf=id==='crystal'?0x9cf0ff:id==='blossom'?0x9ee883:id==='snow'?0xcfeef7:id==='sand'?0xa0c78c:0x87d56b;
     const vineBloom=id==='blossom'?0xffc1df:id==='crystal'?0xc2f8ff:(id==='field'||id==='grass')?0xffd29c:null;
@@ -409,7 +419,8 @@ const GROUND_CFG={
   sand: {file:'grounds/coast_sand_01.jpg',rep:8,tint:0xf0ddb4,accent:0xffda9a},
   blossom:{file:'grounds/leafy_grass.jpg',rep:8,tint:0xd7e8c6,accent:0xffb8d5},
   crystal:{file:'grounds/cobblestone_floor_001.jpg',rep:10,tint:0xc0cdf5,accent:0x98f2ff},
-  runic:  {file:'grounds/runic_flagstone.jpg',rep:6,tint:0xc9d4e8,accent:0x7deede}
+  runic:  {file:'grounds/runic_flagstone.jpg',rep:6,tint:0xc9d4e8,accent:0x7deede},
+  village:{file:'grounds/cobblestone_floor_001.jpg',rep:8,tint:0xdccfb4,accent:0xffd9a0}
 };
 
 
@@ -431,7 +442,8 @@ const LANDSCAPE_VARIANTS={
   sand:{terrain:0xe1c691,grass:0xa6a061,density:.045,roughness:1,emissive:0x000000},
   stone:{terrain:0xa7aaa5,grass:0x71826a,density:.08,roughness:.98,emissive:0x000000},
   crystal:{terrain:0x9ba8d0,grass:0x67cedd,density:.34,roughness:.62,emissive:0x163a54},
-  runic:  {terrain:0x9fb0c8,grass:0x6fc6c0,density:.10,roughness:.80,emissive:0x0a1a2a}
+  runic:  {terrain:0x9fb0c8,grass:0x6fc6c0,density:.10,roughness:.80,emissive:0x0a1a2a},
+  village:{terrain:0xb2c48c,grass:0x4f9038,density:.50,roughness:.95,emissive:0x000000}
 };
 const skyTextureLoader=new THREE.TextureLoader();
 const skyTextureCache=new Map();
@@ -1539,7 +1551,7 @@ function buildPickers(){
     ar.appendChild(b);
   }
   const wr=document.getElementById('worldRow');
-  for(const [k,label] of [['grass','🌿 grass'],['field','🍂 field'],['stone','🪨 stone'],['snow','❄️ snow'],['sand','🏖️ sand'],['blossom','🌸 blossom'],['crystal','💎 crystal'],['runic','🌀 runic']]){
+  for(const [k,label] of [['grass','🌿 grass'],['field','🍂 field'],['stone','🪨 stone'],['snow','❄️ snow'],['sand','🏖️ sand'],['blossom','🌸 blossom'],['crystal','💎 crystal'],['runic','🌀 runic'],['village','🏘️ village']]){
     const b=document.createElement('button');b.className='pbtn';b.dataset.ground=k;b.textContent=label;
     b.addEventListener('click',()=>setGround(k));
     wr.appendChild(b);
