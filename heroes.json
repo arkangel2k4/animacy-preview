@@ -1,9 +1,85 @@
 [
-  {"file": "hero.vrm",  "name": "Kaelen", "archetype": "champion",   "tagline": "Bold Champion",       "pet": "Ember", "petTint": "#2DD4BF"},
-  {"file": "hero2.vrm", "name": "Wren",   "archetype": "trickster",  "tagline": "Chaotic Trickster",   "pet": "Onyx",  "petTint": "#8B5CF6"},
-  {"file": "hero3.vrm", "name": "Orin",   "archetype": "mentor",     "tagline": "Wise Mentor",         "pet": "Rune",  "petTint": "#A9743C"},
-  {"file": "hero4.vrm", "name": "Liora",  "archetype": "healer",     "tagline": "Gentle Healer",       "pet": "Bloom", "petTint": "#F2A6B8"},
-  {"file": "hero5.vrm", "name": "Niko",   "archetype": "adventurer", "tagline": "Cheerful Adventurer", "pet": "Volt",  "petTint": "#3FA7E0"},
-  {"file": "hero6.vrm", "name": "Mira",   "archetype": "mentor",     "tagline": "Arcane Prodigy",      "pet": "Nova",  "petTint": "#B3323C"},
-  {"file": "hero7.vrm", "name": "Fern",   "archetype": "healer",     "tagline": "Forest Spirit",       "pet": "Acorn", "petTint": "#6B8F3D"}
+    {
+        "name": "Alia",
+        "file": "characters/alia/alia-desktop.glb",
+        "mobileFile": "characters/alia/alia-mobile.glb",
+        "type": "cc-glb",
+        "archetype": "sage",
+        "pet": "Luma",
+        "petTint": "#d7a6ff",
+        "petFile": "pets/pet_hywirl.glb"
+    },
+    {
+        "name": "Jonny",
+        "file": "characters/jonny/jonny-desktop.glb",
+        "mobileFile": "characters/jonny/jonny-mobile.glb",
+        "type": "cc-glb",
+        "archetype": "champion",
+        "pet": "Ember",
+        "petTint": "#e0a56a",
+        "petFile": "pets/pet_dragon.glb"
+    },
+    {
+        "file": "hero.vrm",
+        "name": "Kaelen",
+        "archetype": "champion",
+        "tagline": "Bold Champion",
+        "pet": "Ember",
+        "petTint": "#2DD4BF",
+        "petFile": "pets/pet_dragon_evolved.glb"
+    },
+    {
+        "file": "hero2.vrm",
+        "name": "Wren",
+        "archetype": "trickster",
+        "tagline": "Chaotic Trickster",
+        "pet": "Onyx",
+        "petTint": "#8B5CF6",
+        "petFile": "pets/pet_ghost.glb"
+    },
+    {
+        "file": "hero3.vrm",
+        "name": "Orin",
+        "archetype": "mentor",
+        "tagline": "Wise Mentor",
+        "pet": "Rune",
+        "petTint": "#A9743C",
+        "petFile": "pets/pet_goleling.glb"
+    },
+    {
+        "file": "hero4.vrm",
+        "name": "Liora",
+        "archetype": "healer",
+        "tagline": "Gentle Healer",
+        "pet": "Bloom",
+        "petTint": "#F2A6B8",
+        "petFile": "pets/pet_alpaking.glb"
+    },
+    {
+        "file": "hero5.vrm",
+        "name": "Niko",
+        "archetype": "adventurer",
+        "tagline": "Cheerful Adventurer",
+        "pet": "Volt",
+        "petTint": "#3FA7E0",
+        "petFile": "pets/pet_armabee.glb"
+    },
+    {
+        "file": "hero6.vrm",
+        "name": "Mira",
+        "archetype": "mentor",
+        "tagline": "Arcane Prodigy",
+        "pet": "Nova",
+        "petTint": "#B3323C",
+        "petFile": "pets/pet_squidle.glb"
+    },
+    {
+        "file": "hero7.vrm",
+        "name": "Fern",
+        "archetype": "healer",
+        "tagline": "Forest Spirit",
+        "pet": "Acorn",
+        "petTint": "#6B8F3D",
+        "petFile": "pets/pet_mushnub.glb"
+    }
 ]

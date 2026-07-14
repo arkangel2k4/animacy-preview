@@ -178,7 +178,7 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
    Small textures preload to blob URLs (sync URL-modifier consumers like TextureLoader).
    Heavy models (VRMs, GLBs) lazy-decode on first fetch — a hero costs nothing until selected. */
 const PREVIEW_PRELOAD=["skies/dawn.jpg","skies/day.jpg","skies/dusk.jpg","skies/mist.jpg","skies/night.jpg","skies/sunset.jpg","environments/skies/aurora-sky.jpg","environments/skies/enchanted-sky.jpg","environments/skies/night-sky.jpg","environments/skies/mist-sky.jpg","environments/pacific-ocean/pacific-ocean-sky.jpg","environments/pacific-ocean/pacific-ocean-normal.png","grounds/brown_mud_leaves_01.jpg","grounds/coast_sand_01.jpg","grounds/cobblestone_floor_001.jpg","grounds/leafy_grass.jpg","grounds/snow_02.jpg","grounds/runic_flagstone.jpg","outfits/hero1_dawnlight_shoes.png","outfits/hero1_dawnlight_tops.png","outfits/hero1_nightcoat_shoes.png","outfits/hero1_nightcoat_tops.png","outfits/hero2_carnival.png","outfits/hero2_shadow.png","outfits/hero2_shadow_shoes.png","outfits/hero3_runekeeper_bottoms.png","outfits/hero3_runekeeper_shoes.png","outfits/hero3_runekeeper_tops.png","outfits/hero3_starscholar_bottoms.png","outfits/hero3_starscholar_tops.png","outfits/hero4_dawnpetal.png","outfits/hero4_dawnpetal_shoes.png","outfits/hero4_moonlily.png","outfits/hero5_skyranger.png","outfits/hero5_skyranger_shoes.png","outfits/hero5_sunset.png","outfits/hero6_arcanum_bottoms.png","outfits/hero6_arcanum_shoes.png","outfits/hero6_arcanum_tops.png","outfits/hero6_eclipse_bottoms.png","outfits/hero6_eclipse_tops.png","outfits/hero7_autumn.png","outfits/hero7_verdant.png","outfits/hero7_verdant_shoes.png"];
-const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","pet.glb","pet_obsidian.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
+const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","pet.glb","pet_obsidian.glb","pets/pet_dragon_evolved.glb","pets/pet_ghost.glb","pets/pet_goleling.glb","pets/pet_alpaking.glb","pets/pet_armabee.glb","pets/pet_squidle.glb","pets/pet_mushnub.glb","pets/pet_hywirl.glb","pets/pet_dragon.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
 const PREVIEW_ALIAS={'landscapes/grassy-field/grassy-field-mobile.glb':'landscapes/grassy-field/grassy-field-balanced.glb'};
 const __BLOB={};
 function __decode(t){const b=atob(t.trim());const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
@@ -813,6 +813,7 @@ async function loadCharacter(i){
       persona.name=hc.persona;if(hc.archetype)persona.archetype=hc.archetype;
       persona.petName=(hc.pet||'Ember')+' the baby dragon';
       tintPet(hc.petTint||null);
+      loadPet(hc.petFile||'pet.glb'); // stage-2: per-hero companions
       GEAR.accent=hc.petTint||GEAR.accent;
       document.getElementById('nameChip').textContent=persona.name;
       document.getElementById('capWho').textContent=persona.name+':';
@@ -1096,12 +1097,18 @@ function fireFx(id){
   }
 }
 /* ================== pet companion (M2: Quaternius CC0 dragon) ================== */
-const PET={root:null,model:null,mixer:null,gest:null,off:null,ready:false,tint:'#2DD4BF',SCALE:0.30,YAW:-0.45};
-async function loadPet(){
+const PET={root:null,model:null,mixer:null,gest:null,off:null,ready:false,tint:'#2DD4BF',SCALE:0.30,YAW:-0.45,file:null,token:0};
+async function loadPet(file){ // per-hero pets (Ultimate Monsters, CC0) — falls back to pet.glb
+  file=file||'pet.glb';
+  if(PET.file===file)return;
+  PET.file=file; const my=++PET.token;
   try{
     const loader=new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder); // Dragon_Evolved uses EXT_meshopt_compression
-    const g=await loader.loadAsync('pet.glb');
+    const g=await loader.loadAsync(file);
+    if(my!==PET.token)return; // superseded by a later hero swap
+    if(PET.root){scene.remove(PET.root);PET.root=null;}
+    PET.ready=false;PET.cur=null;
     PET.model=g.scene;
     PET.model.rotation.y=PET.YAW; // angled toward camera
     // auto-fit: normalize any pet model to ~0.55 units tall, centered on its true center
@@ -1125,7 +1132,7 @@ async function loadPet(){
     playPetIdle();
     tintPet(APP_SHARED_CONFIG.pet.tint||PET.tint);
     PET.ready=true;PET.root.visible=APP_SHARED_CONFIG.pet.enabled!==false;applyPremiumPresentation();
-  }catch(e){console.warn('pet.glb not found — pet tags fall back to sparkles',e);}
+  }catch(e){console.warn('pet load failed',file,e);if(file!=='pet.glb'&&my===PET.token){PET.file=null;loadPet('pet.glb');}}
 }
 function _petShade(hex,f){const c=new THREE.Color(hex);const h={h:0,s:0,l:0};c.getHSL(h);c.setHSL(h.h,Math.min(1,h.s*1.05),Math.max(0.04,Math.min(0.96,h.l*f)));return c;}
 function tintPet(hex){
@@ -1136,6 +1143,7 @@ function tintPet(hex){
     for(const m of (Array.isArray(o.material)?o.material:[o.material])){
       if('metalness' in m)m.metalness=0.05;
       if('roughness' in m)m.roughness=0.85;
+      if(m.map)continue; // atlas-textured pets (Ultimate Monsters) keep their authored palette
       if(/main/i.test(m.name))m.color=_petShade(PET.tint,1.25);
       else if(/belly|secondary/i.test(m.name))m.color=_petShade(PET.tint,1.8);
       else if(/wing/i.test(m.name))m.color=_petShade(PET.tint,1.5);
