@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0b0d1a;color:#cfe;font:13px/1.5 monospace;padding:12px}iframe{width:640px;height:360px;border:1px solid #345}#log div{border-bottom:1px solid #223;white-space:pre-wrap}</style></head>
+<body><h3>app introspection</h3><iframe id="f" src="index.html?char=99&ground=village&sky=day&v=diag2x"></iframe><div id="log"></div>
+<script>
+const log=(m,c)=>{const d=document.createElement('div');d.textContent=m;if(c)d.style.color=c;document.getElementById('log').appendChild(d);};
+const f=document.getElementById('f');
+f.addEventListener('load',()=>{
+  try{
+    const W=f.contentWindow;
+    const ow=W.console.warn.bind(W.console), oe=W.console.error.bind(W.console);
+    W.console.warn=(...a)=>{log('WARN '+a.map(x=>x&&x.message||String(x)).join(' '),'#fc6');ow(...a)};
+    W.console.error=(...a)=>{log('ERR  '+a.map(x=>x&&x.message||String(x)).join(' '),'#f88');oe(...a)};
+    W.addEventListener('error',e=>log('WINERR '+e.message+' @'+(e.filename||'')+':'+e.lineno,'#f88'));
+    W.addEventListener('unhandledrejection',e=>log('REJECT '+(e.reason&&e.reason.message||e.reason),'#f88'));
+    log('hooked console at iframe load');
+    let n=0;
+    const t=setInterval(()=>{
+      n++;
+      try{
+        const err=W.document.getElementById('err'); const errTxt=err&&err.style.display!=='none'?err.textContent.slice(0,160):'';
+        const res=W.performance.getEntriesByType('resource').filter(r=>r.name.includes('assets-b64')).map(r=>r.name.split('assets-b64/')[1].replace('.b64','')+':'+(r.responseStatus??'?'));
+        log(`t=${n*3}s errbox="${errTxt}" b64-fetches=${res.length}: ${res.slice(-12).join(' | ')}`);
+      }catch(e){log('poll fail '+e.message,'#f88')}
+      if(n>=10){clearInterval(t);log('--- polling done ---')}
+    },3000);
+  }catch(e){log('hook fail: '+e.message,'#f88')}
+});
+</script></body></html>
