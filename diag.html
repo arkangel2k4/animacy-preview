@@ -8,7 +8,7 @@ const log=(m,ok)=>{const d=document.createElement('div');d.textContent=m;d.style
 const BASE='assets-b64/';
 async function get(p){const r=await fetch(BASE+p+'.b64');if(!r.ok)throw new Error('fetch '+r.status);const t=await r.text();const b=atob(t.trim());const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a.buffer;}
 const L=new GLTFLoader();
-const tests=['landscapes/village/village-set.glb','nature/Grass_Small.glb','nature/MapleTree_2.glb','nature/Pine_1.glb','nature/Rock_Medium_1.glb','nature/Mushroom_Common.glb','nature/Clover_1.glb'];
+const tests=['gear_sword_bronze.glb','gear_axe_bronze.glb','gear_pickaxe_bronze.glb','gear_shield_wooden.glb','pets/pet_dragon_evolved.glb','pets/pet_squidle.glb','pets/pet_mushnub.glb','pets/pet_alpaking.glb','pets/pet_goleling.glb','pets/pet_armabee.glb','pets/pet_hywirl.glb','pets/pet_dragon.glb','pets/pet_ghost.glb'];
 for(const t of tests){
   const t0=performance.now();
   try{
