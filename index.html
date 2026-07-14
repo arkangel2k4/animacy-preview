@@ -191,14 +191,12 @@ await Promise.all(PREVIEW_PRELOAD.map(async p=>{
   }catch(e){console.warn('[preview] preload failed',p,e);}
 }));
 console.info('[Animacy preview]',Object.keys(__BLOB).length,'textures preloaded;',PREVIEW_LAZY.size,'models lazy');
-const __PVBASE=new URL('.',location.href).href;
-function __pvnorm(u){let x=String(u);if(x.startsWith(__PVBASE))x=x.slice(__PVBASE.length);return x.replace(/^\.\//,'').split('?')[0];}
-THREE.DefaultLoadingManager.setURLModifier(u=>{const k=__pvnorm(u);return __BLOB[k]||u;});
+THREE.DefaultLoadingManager.setURLModifier(u=>{const k=String(u).replace(/^\.\//,'').split('?')[0];return __BLOB[k]||u;});
 const __lazyCache={};
 const __origFetch=window.fetch.bind(window);
 window.fetch=async function(input,init){
   const raw=typeof input==='string'?input:((input&&input.url)||'');
-  let k=__pvnorm(raw);
+  let k=raw.replace(/^\.\//,'').split('?')[0];
   if(PREVIEW_ALIAS[k])k=PREVIEW_ALIAS[k];
   if(__BLOB[k]){
     if(init&&String(init.method||'').toUpperCase()==='HEAD')return new Response(null,{status:200});
@@ -514,10 +512,10 @@ async function loadLandscapeBase(){
 const PACIFIC_ASSET='environments/pacific-ocean/';
 let pacificWater=null,pacificShoreShelf=null,pacificWaterNormal=null;
 function makePacificWaterMaterial(){
-  const uniforms={uTime:{value:0},uNormal:{value:null},uHasNormal:{value:0},uDeep:{value:new THREE.Color(0x164a63)},uShallow:{value:new THREE.Color(0x5b9eb0)},uSky:{value:new THREE.Color(0xb8d7df)}};
+  const uniforms={uTime:{value:0},uNormal:{value:null},uHasNormal:{value:0},uDeep:{value:new THREE.Color(0x164a63)},uShallow:{value:new THREE.Color(0x5b9eb0)},uSky:{value:new THREE.Color(0xb8d7df)},uFogColor:{value:new THREE.Color(0x97abc2)}};
   return new THREE.ShaderMaterial({uniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:false,
-    vertexShader:`uniform float uTime;varying vec2 vUv;varying float vWave;void main(){vUv=uv;vec3 p=position;float w=sin((p.x+p.z)*.105+uTime*.62)*.055+sin(p.x*.19-p.z*.13+uTime*.38)*.035;float edge=smoothstep(0.0,6.0,length(p.xz)-20.0);p.y+=w*edge;vWave=w;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
-    fragmentShader:`uniform float uTime;uniform sampler2D uNormal;uniform float uHasNormal;uniform vec3 uDeep;uniform vec3 uShallow;uniform vec3 uSky;varying vec2 vUv;varying float vWave;void main(){vec2 uv=vUv*38.0;vec3 n=vec3(.5);if(uHasNormal>.5){vec3 a=texture2D(uNormal,uv+vec2(uTime*.006,uTime*.003)).rgb;vec3 b=texture2D(uNormal,uv*1.37+vec2(-uTime*.004,uTime*.005)).rgb;n=mix(a,b,.5);}float rip=(n.r+n.g+n.b)/3.0;float fres=.34+.22*pow(1.0-abs(vWave)*8.0,2.0);vec3 col=mix(uDeep,uShallow,.48+rip*.14);col=mix(col,uSky,fres);float alpha=.88;gl_FragColor=vec4(col,alpha);}`
+    vertexShader:`uniform float uTime;varying vec2 vUv;varying float vWave;varying float vDist;void main(){vUv=uv;vec3 p=position;float w=sin((p.x+p.z)*.105+uTime*.62)*.055+sin(p.x*.19-p.z*.13+uTime*.38)*.035;float edge=smoothstep(0.0,6.0,length(p.xz)-20.0);p.y+=w*edge;vWave=w;vDist=length(p.xz);gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
+    fragmentShader:`uniform float uTime;uniform sampler2D uNormal;uniform float uHasNormal;uniform vec3 uDeep;uniform vec3 uShallow;uniform vec3 uSky;uniform vec3 uFogColor;varying vec2 vUv;varying float vWave;varying float vDist;void main(){vec2 uv=vUv*38.0;vec3 n=vec3(.5);if(uHasNormal>.5){vec3 a=texture2D(uNormal,uv+vec2(uTime*.006,uTime*.003)).rgb;vec3 b=texture2D(uNormal,uv*1.37+vec2(-uTime*.004,uTime*.005)).rgb;n=mix(a,b,.5);}float rip=(n.r+n.g+n.b)/3.0;float sparkle=smoothstep(.62,.85,rip)*.18;float fres=.34+.22*pow(1.0-abs(vWave)*8.0,2.0);vec3 col=mix(uDeep,uShallow,.48+rip*.14);col=mix(col,uSky,fres);col+=sparkle*uSky;float horizon=smoothstep(60.0,420.0,vDist);col=mix(col,uFogColor,horizon*.92);float alpha=mix(.88,0.0,smoothstep(300.0,500.0,vDist));gl_FragColor=vec4(col,alpha);}`
   });
 }
 function setupPacificWater(){
@@ -528,6 +526,16 @@ function setupPacificWater(){
   skyTextureLoader.load(PACIFIC_ASSET+'pacific-ocean-normal.png',tex=>{tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.colorSpace=THREE.NoColorSpace;pacificWaterNormal=tex;pacificWater.material.uniforms.uNormal.value=tex;pacificWater.material.uniforms.uHasNormal.value=1;},undefined,()=>{});
 }
 function updatePacificWater(now){if(pacificWater?.material?.uniforms)pacificWater.material.uniforms.uTime.value=now;}
+function updatePacificWaterSky(cfg){
+  if(!pacificWater||!pacificWater.material||!pacificWater.material.uniforms)return;
+  const u=pacificWater.material.uniforms;
+  const fog=new THREE.Color(cfg.fog);
+  const hemi=new THREE.Color(cfg.hemi[0]);
+  u.uFogColor.value.copy(fog);
+  u.uSky.value.copy(fog).lerp(hemi,.45);
+  u.uDeep.value.set(0x164a63).lerp(fog,.55).multiplyScalar(.72);
+  u.uShallow.value.set(0x5b9eb0).lerp(fog,.45);
+}
 function updatePacificShore(id){
   const cfg=GROUND_CFG[id]||GROUND_CFG.grass,p=LANDSCAPE_VARIANTS[id]||LANDSCAPE_VARIANTS.grass;
   if(pacificShoreShelf){pacificShoreShelf.material.map=cfg._t||null;pacificShoreShelf.material.color.set(p.terrain);pacificShoreShelf.material.needsUpdate=true;}
@@ -555,7 +563,7 @@ function setSky(id){
   for(const c of(WORLD.clouds||[]))c.visible=false;
   if(WORLD.haze)WORLD.haze.visible=false;if(WORLD.haze2)WORLD.haze2.visible=false;
   hemi.color.set(cfg.hemi[0]);hemi.groundColor.set(cfg.hemi[1]);hemi.intensity=cfg.hemi[2]; dir.color.set(cfg.dir[0]);dir.intensity=cfg.dir[1]; rim.color.set(cfg.part); rim.intensity=(curSky==='day'||curSky==='sunset')?0.46:0.68;
-  if(WORLD.orbs) for(const o of WORLD.orbs){o.material.color.set(cfg.part);} markPicks&&markPicks();
+  if(WORLD.orbs) for(const o of WORLD.orbs){o.material.color.set(cfg.part);} updatePacificWaterSky(cfg); markPicks&&markPicks();
 }
 function initWorld(){
   WORLD.ground=new THREE.Mesh(new THREE.CircleGeometry(LANDSCAPE_CIRCLE_RADIUS,192),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0}));WORLD.ground.userData.environmentProtected=true;WORLD.ground.rotation.x=-Math.PI/2;WORLD.ground.receiveShadow=true;scene.add(WORLD.ground);
@@ -880,6 +888,7 @@ function applyOutfit(id,persist=true){
   currentOutfit=def?id:'';
   if(persist)try{localStorage.setItem(outfitStoreKey(),currentOutfit);}catch(e){}
   markOutfitPicks();
+  setStreetwearLayers(!def); // outfits supersede the streetwear transform (real skirts return)
   if(!vrm.scene.userData.animacyOrigTex)vrm.scene.userData.animacyOrigTex=new Map();
   if(!def){ // restore this hero's original textures
     for(const [matName,orig] of vrm.scene.userData.animacyOrigTex){
@@ -898,6 +907,19 @@ function applyOutfit(id,persist=true){
       for(const m of mats){m.map=tex;if('shadeMultiplyTexture' in m)m.shadeMultiplyTexture=tex;m.needsUpdate=true;}
     },undefined,e=>console.warn('[outfit] texture failed',def.tex[matName],e));
   }
+}
+function setStreetwearLayers(showStreetwear){
+  if(!vrm)return;
+  vrm.scene.traverse(o=>{
+    if(/^AnimacyStreetwear(Pants|Belt)_/.test(o.name)){o.visible=showStreetwear;return;}
+    if(!o.isSkinnedMesh||!o.material)return;
+    for(const m of(Array.isArray(o.material)?o.material:[o.material])){
+      if(/_Bottoms_.*_CLOTH/i.test(String(m&&m.name||''))){
+        if(o.userData.animacyStreetwearHidden===undefined)o.userData.animacyStreetwearHidden=(o.visible===false);
+        if(o.userData.animacyStreetwearHidden)o.visible=!showStreetwear; // real bottoms return when an outfit is worn
+      }
+    }
+  });
 }
 function markOutfitPicks(){document.querySelectorAll('#outfitRow .pbtn').forEach(b=>b.classList.toggle('on',(b.dataset.outfit||'')===currentOutfit));}
 function buildOutfitRow(){
@@ -1636,7 +1658,6 @@ const prefS=(()=>{try{return localStorage.getItem('an_sky');}catch(e){return nul
 setScene(curScene);
 if(prefG&&GROUND_CFG[prefG])setGround(prefG); // user's pinned world wins over the scene pair
 if(prefS&&SKY_CFG[prefS])setSky(prefS);
-// preview deep-links: ?sky= & ?ground= override everything
 const skyQ=Q.get('sky'); if(skyQ&&SKY_CFG[skyQ])setSky(skyQ);
 const grdQ=Q.get('ground'); if(grdQ&&GROUND_CFG[grdQ])setGround(grdQ);
 loadAppSharedDefaults(); /* preview: lab sync off */
@@ -1653,7 +1674,6 @@ loadCharacter(parseInt(Q.get('char')||'0')||0).then(()=>{
   GEAR.tier=parseInt(localStorage.getItem('an_tier')||'0')||0;
   const sg=localStorage.getItem('an_gear');
   if(sg&&GEAR_DEFS[sg])equipGear(sg);
-  // preview deep-links: ?outfit= ?gear= ?tier= apply after the hero lands
   const oq=Q.get('outfit'); if(oq!==null)setTimeout(()=>{try{applyOutfit(oq,false);}catch(e){}},500);
   const gq=Q.get('gear'); if(gq&&GEAR_DEFS[gq])setTimeout(()=>{try{equipGear(gq);}catch(e){}},700);
   const tq=Q.get('tier'); if(tq!==null)setTimeout(()=>{try{applyEnchant(parseInt(tq)||0);}catch(e){}},900);
