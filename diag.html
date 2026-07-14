@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0b0d1a;color:#8ff7c8;font:16px/1.6 monospace;padding:20px}#log div{border-bottom:1px solid #223}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
+</head><body><h2>Animacy world-asset diagnostic</h2><div id="log"></div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const log=(m,ok)=>{const d=document.createElement('div');d.textContent=m;d.style.color=ok===false?'#ff8899':ok?'#8ff7c8':'#ccd';document.getElementById('log').appendChild(d);};
+const BASE='assets-b64/';
+async function get(p){const r=await fetch(BASE+p+'.b64');if(!r.ok)throw new Error('fetch '+r.status);const t=await r.text();const b=atob(t.trim());const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a.buffer;}
+const L=new GLTFLoader();
+const tests=['landscapes/village/village-set.glb','nature/Grass_Small.glb','nature/MapleTree_2.glb','nature/Pine_1.glb','nature/Rock_Medium_1.glb','nature/Mushroom_Common.glb','nature/Clover_1.glb'];
+for(const t of tests){
+  const t0=performance.now();
+  try{
+    const buf=await get(t); const kb=(buf.byteLength/1024).toFixed(0);
+    const g=await new Promise((res,rej)=>{const to=setTimeout(()=>rej(new Error('PARSE TIMEOUT 15s')),15000);L.parse(buf,'',x=>{clearTimeout(to);res(x)},e=>{clearTimeout(to);rej(e)})});
+    let meshes=0,mats=new Set();g.scene.traverse(o=>{if(o.isMesh){meshes++;for(const m of(Array.isArray(o.material)?o.material:[o.material]))mats.add(m&&m.name)}});
+    log(`OK  ${t} — ${kb}KB, ${meshes} meshes, ${mats.size} materials, ${(performance.now()-t0).toFixed(0)}ms`,true);
+  }catch(e){log(`FAIL ${t} — ${e&&e.message||e}`,false);}
+}
+log('--- done ---');
+</script></body></html>
