@@ -4,7 +4,8 @@
     "type": "universal",
     "file": "uni/uni_body_m.glb",
     "uni": {
-      "skin": "light"
+      "skin": "light",
+      "outfit": "ranger"
     },
     "archetype": "champion",
     "tagline": "Bold Champion",
@@ -19,7 +20,8 @@
     "uni": {
       "skin": "light",
       "hair": "uni/hair_buns.glb",
-      "hairTint": "#3a2b4d"
+      "hairTint": "#3a2b4d",
+      "outfit": "peasant"
     },
     "archetype": "trickster",
     "tagline": "Chaotic Trickster",
@@ -34,7 +36,8 @@
     "uni": {
       "skin": "dark",
       "beard": "uni/hair_beard.glb",
-      "hairTint": "#6e5433"
+      "hairTint": "#6e5433",
+      "outfit": "peasant"
     },
     "archetype": "mentor",
     "tagline": "Wise Mentor",
@@ -49,7 +52,8 @@
     "uni": {
       "skin": "light",
       "hair": "uni/hair_long.glb",
-      "hairTint": "#e8d9a8"
+      "hairTint": "#e8d9a8",
+      "outfit": "peasant"
     },
     "archetype": "healer",
     "tagline": "Gentle Healer",
@@ -64,7 +68,8 @@
     "uni": {
       "skin": "dark",
       "hair": "uni/hair_buzzedfemale.glb",
-      "hairTint": "#20344d"
+      "hairTint": "#20344d",
+      "outfit": "ranger"
     },
     "archetype": "adventurer",
     "tagline": "Cheerful Adventurer",
@@ -78,7 +83,8 @@
     "file": "uni/uni_body_f.glb",
     "uni": {
       "skin": "light",
-      "hairTint": "#5e1f28"
+      "hairTint": "#5e1f28",
+      "outfit": "ranger_runic"
     },
     "archetype": "mentor",
     "tagline": "Arcane Prodigy",
@@ -93,7 +99,8 @@
     "uni": {
       "skin": "light",
       "hair": "uni/hair_long.glb",
-      "hairTint": "#5f8a46"
+      "hairTint": "#5f8a46",
+      "outfit": "peasant"
     },
     "archetype": "healer",
     "tagline": "Forest Spirit",
