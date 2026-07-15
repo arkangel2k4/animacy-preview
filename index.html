@@ -98,6 +98,13 @@
   @media(orientation:landscape) and (max-height:560px){.bar{width:min(680px,72vw)}.game-drawer{width:min(420px,48vw)}.cap{bottom:88px}}
   @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
   .art-style-select{width:100%;padding:11px 12px;border-radius:12px;background:rgba(31,36,65,.78);color:var(--ink);border:1px solid rgba(255,255,255,.13);font:700 13px inherit}
+  .asset-controls{width:100%;display:grid!important;gap:8px}
+  .asset-control{display:grid;gap:5px;min-width:0}
+  .asset-control>span,.asset-group-title{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#aeb7df}
+  .asset-group-title{flex-basis:100%;margin-top:4px}
+  .asset-action{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+  .asset-action .pbtn{height:42px}
+  .asset-note{font-size:11px;line-height:1.4;color:#9099c1}
 
 </style>
 </head>
@@ -118,12 +125,15 @@
     <aside class="game-drawer" id="quickDrawer" aria-hidden="true">
       <div class="drawer-head"><h2>Actions</h2><button class="drawer-close" aria-label="Close">×</button></div>
       <div class="drawer-section"><h3>Speak</h3><div id="quickMount"></div></div>
+      <div class="drawer-section"><h3>Animation library · 2 packs</h3><div id="animMount"></div></div>
       <div class="drawer-section"><h3>Personality</h3><div id="archMount"></div></div>
     </aside>
     <aside class="game-drawer" id="customizeDrawer" aria-hidden="true">
       <div class="drawer-head"><h2>Wardrobe</h2><button class="drawer-close" aria-label="Close">×</button></div>
       <div class="drawer-section"><h3>Hero</h3><div id="charMount"></div></div>
+      <div class="drawer-section"><h3>Hair, facial hair & head</h3><div id="appearanceMount"></div></div>
       <div class="drawer-section"><h3>Outfits</h3><div id="outfitMount"></div></div>
+      <div class="drawer-section"><h3>Companion</h3><div id="petMount"></div></div>
       <div class="drawer-section"><h3>Equipment & enchantment</h3><div id="gearMount"></div></div>
       <div class="drawer-section"><h3>Colors</h3><div id="tintMount"></div></div>
       <div class="drawer-section"><h3>World</h3><div id="worldMount"></div></div>
@@ -156,6 +166,9 @@
       <div class="picks" id="worldRow"><span class="plabel">ground</span></div>
       <div class="picks" id="archRow"><span class="plabel">personality</span></div>
       <div class="picks" id="outfitRow"><span class="plabel">outfit</span></div>
+      <div class="picks asset-controls" id="appearanceRow"></div>
+      <div class="picks asset-controls" id="petRow"></div>
+      <div class="picks asset-controls" id="animRow"></div>
       <div class="picks" id="gearRow"><span class="plabel">gear</span></div>
     </div>
   </div>
@@ -178,7 +191,7 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
    Small textures preload to blob URLs (sync URL-modifier consumers like TextureLoader).
    Heavy models (VRMs, GLBs) lazy-decode on first fetch — a hero costs nothing until selected. */
 const PREVIEW_PRELOAD=["skies/dawn.jpg","skies/day.jpg","skies/dusk.jpg","skies/mist.jpg","skies/night.jpg","skies/sunset.jpg","environments/skies/aurora-sky.jpg","environments/skies/enchanted-sky.jpg","environments/skies/night-sky.jpg","environments/skies/mist-sky.jpg","environments/pacific-ocean/pacific-ocean-sky.jpg","environments/pacific-ocean/pacific-ocean-normal.png","uni/uni_skin_m_light.jpg","uni/uni_skin_f_light.jpg","grounds/brown_mud_leaves_01.jpg","grounds/coast_sand_01.jpg","grounds/cobblestone_floor_001.jpg","grounds/leafy_grass.jpg","grounds/snow_02.jpg","grounds/runic_flagstone.jpg","outfits/hero1_dawnlight_shoes.png","outfits/hero1_dawnlight_tops.png","outfits/hero1_nightcoat_shoes.png","outfits/hero1_nightcoat_tops.png","outfits/hero2_carnival.png","outfits/hero2_shadow.png","outfits/hero2_shadow_shoes.png","outfits/hero3_runekeeper_bottoms.png","outfits/hero3_runekeeper_shoes.png","outfits/hero3_runekeeper_tops.png","outfits/hero3_starscholar_bottoms.png","outfits/hero3_starscholar_tops.png","outfits/hero4_dawnpetal.png","outfits/hero4_dawnpetal_shoes.png","outfits/hero4_moonlily.png","outfits/hero5_skyranger.png","outfits/hero5_skyranger_shoes.png","outfits/hero5_sunset.png","outfits/hero6_arcanum_bottoms.png","outfits/hero6_arcanum_shoes.png","outfits/hero6_arcanum_tops.png","outfits/hero6_eclipse_bottoms.png","outfits/hero6_eclipse_tops.png","outfits/hero7_autumn.png","outfits/hero7_verdant.png","outfits/hero7_verdant_shoes.png"];
-const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","gear_sword_bronze.glb","gear_axe_bronze.glb","gear_pickaxe_bronze.glb","gear_shield_wooden.glb","pet.glb","pet_obsidian.glb","uni/uni_body_m.glb","uni/uni_body_f.glb","uni/ual1.glb","uni/ual2.glb","uni/hair_buns.glb","uni/hair_long.glb","uni/hair_beard.glb","uni/hair_buzzedfemale.glb","uni/uni_body_m_peasant.glb","uni/uni_body_f_peasant.glb","uni/uni_body_m_ranger.glb","uni/uni_body_f_ranger.glb","uni/uni_body_m_ranger_runic.glb","uni/uni_body_f_ranger_runic.glb","uni/uni_outfit_m_peasant.glb","uni/uni_outfit_f_peasant.glb","uni/uni_outfit_m_ranger.glb","uni/uni_outfit_f_ranger.glb","uni/uni_outfit_m_ranger_runic.glb","uni/uni_outfit_f_ranger_runic.glb","pets/pet_dragon_evolved.glb","pets/pet_ghost.glb","pets/pet_goleling.glb","pets/pet_alpaking.glb","pets/pet_armabee.glb","pets/pet_squidle.glb","pets/pet_mushnub.glb","pets/pet_hywirl.glb","pets/pet_dragon.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Bush_Common.glb","nature/Clover_1.glb","nature/CommonTree_1.glb","nature/CommonTree_3.glb","nature/Fern_1.glb","nature/Flower_3_Group.glb","nature/Grass_Common_Tall.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
+const PREVIEW_LAZY=new Set(["hero.vrm","hero2.vrm","hero3.vrm","hero4.vrm","hero5.vrm","hero6.vrm","hero7.vrm","gear_sword.glb","gear_staff.glb","gear_wand.glb","gear_sword_runic.glb","gear_staff_runic.glb","gear_wand_runic.glb","gear_sword_bronze.glb","gear_axe_bronze.glb","gear_pickaxe_bronze.glb","gear_shield_wooden.glb","pet.glb","pet_obsidian.glb","uni/uni_body_m.glb","uni/uni_body_f.glb","uni/ual1.glb","uni/ual2.glb","uni/hair_buns.glb","uni/hair_long.glb","uni/hair_beard.glb","uni/hair_buzzedfemale.glb","uni/hair_buzzed.glb","uni/hair_simpleparted.glb","uni/eyebrows_regular.glb","uni/eyebrows_female.glb","uni/uni_body_m_peasant.glb","uni/uni_body_f_peasant.glb","uni/uni_body_m_ranger.glb","uni/uni_body_f_ranger.glb","uni/uni_body_m_ranger_runic.glb","uni/uni_body_f_ranger_runic.glb","pets/pet_dragon_evolved.glb","pets/pet_ghost.glb","pets/pet_goleling.glb","pets/pet_alpaking.glb","pets/pet_armabee.glb","pets/pet_squidle.glb","pets/pet_mushnub.glb","pets/pet_hywirl.glb","pets/pet_dragon.glb","landscapes/grassy-field/grassy-field-balanced.glb","nature/Clover_1.glb","nature/Fern_1.glb","nature/Grass_Wispy_Tall.glb","nature/Pebble_Round_1.glb","nature/Pebble_Square_2.glb","nature/RockPath_Round_Small_1.glb","nature/TwistedTree_1.glb","nature/Grass_Small.glb","nature/Grass_Large.glb","nature/Grass_Large_Extruded.glb","nature/Flower_1_Clump.glb","nature/Flower_2_Clump.glb","nature/Flower_5_Clump.glb","nature/Petal_2.glb","nature/Bush.glb","nature/Bush_Flowers.glb","nature/Bush_Small.glb","nature/Rock_Medium_1.glb","nature/Rock_Medium_2.glb","nature/Mushroom_Common.glb","nature/Mushroom_Laetiporus.glb","nature/BirchTree_2.glb","nature/MapleTree_2.glb","nature/MapleTree_4.glb","nature/DeadTree_2.glb","nature/DeadTree_5.glb","nature/Pine_1.glb","nature/Pine_3.glb","landscapes/village/village-set.glb"]);
 const PREVIEW_ALIAS={'landscapes/grassy-field/grassy-field-mobile.glb':'landscapes/grassy-field/grassy-field-balanced.glb'};
 const __BLOB={};
 function __decode(t){const b=atob(t.trim());const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
@@ -236,6 +249,17 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>t<0?0:t>1?1:t*t*(3-2*t);
 const sin01=t=>Math.sin(clamp(t,0,1)*Math.PI);
 function perf(){return performance.now()/1000;}
+function characterStorageId(hc=CHARACTERS[charIdx]){
+  return String((hc&&(hc.name||hc.file||hc.url))||'hero').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+}
+function makeAssetSelect(label,options,value,onChange,disabled=false){
+  const wrap=document.createElement('label');wrap.className='asset-control';
+  const title=document.createElement('span');title.textContent=label;wrap.appendChild(title);
+  const select=document.createElement('select');select.className='art-style-select';select.disabled=disabled;
+  for(const [id,text] of options){const opt=document.createElement('option');opt.value=id;opt.textContent=text;select.appendChild(opt);}
+  select.value=value;select.addEventListener('change',()=>onChange(select.value));wrap.appendChild(select);
+  return {wrap,select};
+}
 
 /* Dispose replaced GLTFs instead of leaving their GPU allocations behind.  The
    preview swaps heroes, outfits, pets and gear often, so removeFromParent alone
@@ -368,13 +392,14 @@ const SKY_CFG={
   aurora:   {file:'skies/night.jpg',  fog:'#34506b', part:0x88ffe2, hemi:[0xb7fff0,0x17303b,1.05], dir:[0xe0fcff,0.95], tint:0xbde9ff, cloud:[0.28,0xfafdff], haze:'#5be6cf', stars:true},
   enchanted:{file:'skies/dusk.jpg',   fog:'#4f4769', part:0xffd7ff, hemi:[0xeed8ff,0x29223f,1.06], dir:[0xf0d5ff,0.96], tint:0xe7dfff, cloud:[0.30,0xfafdff], haze:'#c7a6ff'}
 };
+const SKY_LABELS={day:'☀️ day',sunset:'🌇 sunset',dawn:'🌅 dawn',dusk:'🌆 dusk',night:'🌙 night',mist:'🌫️ mist',aurora:'🪄 aurora',enchanted:'🔮 enchanted'};
 const SCATTER_CFG={
-  grass:{items:[['Grass_Large',26,[0.30,0.52]],['Grass_Small',22,[0.22,0.38]],['Grass_Wispy_Tall',18,[0.32,0.52]],['Clover_1',16,[0.10,0.22]],['Flower_1_Clump',12,[0.28,0.44]],['Flower_5_Clump',8,[0.26,0.40]],['Fern_1',9,[0.24,0.38]],['Bush',6,[0.42,0.66]],['Bush_Flowers',4,[0.44,0.66]],['Mushroom_Common',4,[0.10,0.20]]],ring:[['MapleTree_2',4,[3.0,4.0]],['BirchTree_2',3,[3.0,3.9]],['Pine_1',2,[3.1,4.1]]],vines:0},
+  grass:{items:[['Grass_Large',14,[0.30,0.52]],['Grass_Large_Extruded',12,[0.30,0.52]],['Grass_Small',22,[0.22,0.38]],['Grass_Wispy_Tall',18,[0.32,0.52]],['Clover_1',16,[0.10,0.22]],['Flower_1_Clump',12,[0.28,0.44]],['Flower_5_Clump',8,[0.26,0.40]],['Fern_1',9,[0.24,0.38]],['Bush',6,[0.42,0.66]],['Bush_Flowers',4,[0.44,0.66]],['Mushroom_Common',4,[0.10,0.20]]],ring:[['MapleTree_2',4,[3.0,4.0]],['BirchTree_2',3,[3.0,3.9]],['Pine_1',2,[3.1,4.1]]],vines:0},
   field:{items:[['Grass_Small',16,[0.22,0.40]],['Grass_Wispy_Tall',16,[0.26,0.44]],['Flower_2_Clump',8,[0.26,0.40]],['Fern_1',7,[0.22,0.34]],['Bush_Small',5,[0.34,0.52]],['Pebble_Round_1',8,[0.07,0.14]],['Rock_Medium_1',5,[0.22,0.40]],['Mushroom_Laetiporus',3,[0.12,0.22]]],ring:[['MapleTree_4',4,[2.7,3.6]],['DeadTree_5',2,[2.6,3.4]],['BirchTree_2',2,[2.8,3.7]]],vines:0},
   stone:{items:[['Grass_Small',10,[0.18,0.32]],['Grass_Wispy_Tall',10,[0.20,0.34]],['Flower_1_Clump',6,[0.22,0.34]],['Fern_1',6,[0.18,0.28]],['Bush_Small',4,[0.28,0.42]],['Pebble_Square_2',10,[0.07,0.14]],['Pebble_Round_1',8,[0.06,0.12]],['Rock_Medium_2',6,[0.20,0.36]]],ring:[['Pine_3',3,[2.6,3.4]],['DeadTree_2',2,[2.5,3.3]],['TwistedTree_1',2,[2.4,3.2]]],vines:0},
   snow: {items:[['Grass_Wispy_Tall',9,[0.18,0.28]],['Fern_1',5,[0.18,0.26]],['Rock_Medium_1',6,[0.20,0.36]],['Pebble_Round_1',8,[0.08,0.15]],['Bush_Small',3,[0.26,0.40]]],ring:[['Pine_1',4,[2.8,3.7]],['Pine_3',3,[2.6,3.5]],['DeadTree_2',1,[2.5,3.2]]],vines:0},
   sand: {items:[['Grass_Wispy_Tall',10,[0.18,0.30]],['Fern_1',5,[0.18,0.26]],['Bush_Small',4,[0.26,0.40]],['Pebble_Round_1',12,[0.07,0.14]],['Rock_Medium_2',6,[0.20,0.36]],['Flower_2_Clump',3,[0.20,0.30]]],ring:[['DeadTree_5',2,[2.4,3.2]],['TwistedTree_1',3,[2.3,3.0]]],vines:0},
-  blossom:{items:[['Grass_Large',22,[0.28,0.48]],['Grass_Small',16,[0.20,0.36]],['Flower_2_Clump',10,[0.24,0.38]],['Flower_1_Clump',14,[0.28,0.46]],['Flower_5_Clump',10,[0.26,0.42]],['Clover_1',14,[0.10,0.22]],['Bush_Flowers',7,[0.40,0.62]]],ring:[['MapleTree_2',4,[2.9,3.9]],['MapleTree_4',3,[2.7,3.6]],['BirchTree_2',3,[2.7,3.5]]],vines:0},
+  blossom:{items:[['Grass_Large',22,[0.28,0.48]],['Grass_Small',16,[0.20,0.36]],['Flower_2_Clump',8,[0.24,0.38]],['Flower_1_Clump',10,[0.28,0.46]],['Flower_5_Clump',8,[0.26,0.42]],['Petal_2',16,[0.05,0.12]],['Clover_1',14,[0.10,0.22]],['Bush_Flowers',7,[0.40,0.62]]],ring:[['MapleTree_2',4,[2.9,3.9]],['MapleTree_4',3,[2.7,3.6]],['BirchTree_2',3,[2.7,3.5]]],vines:0},
   crystal:{items:[['Grass_Small',10,[0.16,0.30]],['Grass_Wispy_Tall',10,[0.18,0.30]],['Flower_5_Clump',6,[0.22,0.34]],['Fern_1',6,[0.18,0.28]],['Mushroom_Common',6,[0.12,0.24]],['Pebble_Square_2',12,[0.08,0.16]],['Rock_Medium_2',7,[0.18,0.32]]],ring:[['DeadTree_2',4,[2.5,3.4]],['TwistedTree_1',3,[2.3,3.2]]],vines:0},
   runic:{items:[['Grass_Wispy_Tall',8,[0.18,0.30]],['Fern_1',6,[0.18,0.28]],['Mushroom_Laetiporus',5,[0.12,0.24]],['Pebble_Square_2',10,[0.08,0.16]],['Rock_Medium_1',6,[0.20,0.36]],['RockPath_Round_Small_1',5,[0.18,0.30]]],ring:[['DeadTree_2',3,[2.6,3.5]],['DeadTree_5',2,[2.4,3.2]],['TwistedTree_1',3,[2.4,3.3]]],vines:0},
   village:{set:'landscapes/village/village-set.glb',items:[['Grass_Small',14,[0.20,0.34]],['Grass_Large',10,[0.26,0.44]],['Flower_1_Clump',8,[0.26,0.40]],['Clover_1',10,[0.10,0.20]],['Bush',3,[0.38,0.56]]],ring:[['MapleTree_2',2,[2.9,3.7]],['BirchTree_2',2,[2.8,3.6]]],vines:0}
@@ -454,6 +479,7 @@ const GROUND_CFG={
   runic:  {file:'grounds/runic_flagstone.jpg',rep:6,tint:0xc9d4e8,accent:0x7deede},
   village:{file:'grounds/cobblestone_floor_001.jpg',rep:8,tint:0xdccfb4,accent:0xffd9a0}
 };
+const GROUND_LABELS={grass:'🌿 grass',field:'🍂 field',stone:'🪨 stone',snow:'❄️ snow',sand:'🏖️ sand',blossom:'🌸 blossom',crystal:'💎 crystal',runic:'🌀 runic',village:'🏘️ village'};
 
 
 const SKY_FILE_STYLE={
@@ -841,14 +867,11 @@ async function loadCharacter(i){
     for(let warm=0;warm<10;warm++){mixer.update(1/60);vrm.update(1/60);}
     vrm.scene.position.set(0,0,0);vrm.springBoneManager?.reset?.();vrm.scene.visible=true;avatarReady=true;
     playIdle();
-    buildOutfitRow();currentOutfit='';
+    buildOutfitRow();buildAppearanceRow();buildAnimationRow();buildPetRow();currentOutfit='';
     try{const so=localStorage.getItem(outfitStoreKey());if(so)applyOutfit(so,false);}catch(e){}
     if(hc&&hc.persona){
       persona.name=hc.persona;if(hc.archetype)persona.archetype=hc.archetype;
-      persona.petName=(hc.pet||'Ember')+' the baby dragon';
-      tintPet(hc.petTint||null);
-      loadPet(hc.petFile||'pet.glb'); // stage-2: per-hero companions
-      GEAR.accent=hc.petTint||GEAR.accent;
+      loadSelectedPet(hc);
       document.getElementById('nameChip').textContent=persona.name;
       document.getElementById('capWho').textContent=persona.name+':';
       Live.syncPersona&&Live.syncPersona();
@@ -992,7 +1015,6 @@ function buildOutfitRow(){
   if(UNI.active){
     const udefs=UNI_OUTFIT_DEFS[UNI.gender]||[];
     const umk=(id,label)=>{const b=document.createElement('button');b.className='pbtn';b.dataset.outfit=id;b.textContent=label;b.addEventListener('click',()=>uniApplyOutfit(id));row.appendChild(b);};
-    umk('','🦸 suit');
     for(const d of udefs)umk(d.id,d.label);
     markOutfitPicks();
     return;
@@ -1150,7 +1172,51 @@ function fireFx(id){
   }
 }
 /* ================== pet companion (M2: Quaternius CC0 dragon) ================== */
-const PET={root:null,model:null,mixer:null,gest:null,off:null,ready:false,loading:false,tint:'#2DD4BF',SCALE:0.30,YAW:-0.45,file:null,token:0};
+const PET_DEFS=[
+  {id:'hero',label:'Hero default companion',file:null},{id:'none',label:'No companion',file:''},
+  {id:'legacy',label:'Legacy baby dragon',name:'Ember',file:'pet.glb'},
+  {id:'obsidian',label:'Obsidian baby dragon',name:'Onyx',file:'pet_obsidian.glb',preservePalette:true},
+  {id:'dragon_evolved',label:'Evolved dragon',name:'Ember',file:'pets/pet_dragon_evolved.glb'},
+  {id:'ghost',label:'Ghost',name:'Onyx',file:'pets/pet_ghost.glb'},
+  {id:'goleling',label:'Goleling',name:'Rune',file:'pets/pet_goleling.glb'},
+  {id:'alpaking',label:'Alpaking',name:'Bloom',file:'pets/pet_alpaking.glb'},
+  {id:'armabee',label:'Armabee',name:'Volt',file:'pets/pet_armabee.glb'},
+  {id:'squidle',label:'Squidle',name:'Nova',file:'pets/pet_squidle.glb'},
+  {id:'mushnub',label:'Mushnub',name:'Acorn',file:'pets/pet_mushnub.glb'},
+  {id:'hywirl',label:'Hywirl',name:'Hywirl',file:'pets/pet_hywirl.glb'},
+  {id:'dragon',label:'Young dragon',name:'Drake',file:'pets/pet_dragon.glb'}
+];
+const PET={root:null,model:null,mixer:null,gest:null,off:null,ready:false,loading:false,tint:'#2DD4BF',SCALE:0.30,YAW:-0.45,file:null,token:0,selection:'hero',preservePalette:false};
+function petStoreKey(hc=CHARACTERS[charIdx]){return 'an_pet_'+characterStorageId(hc);}
+function selectedPetId(hc=CHARACTERS[charIdx]){
+  let id='hero';try{id=localStorage.getItem(petStoreKey(hc))||'hero';}catch(e){}
+  return PET_DEFS.some(d=>d.id===id)?id:'hero';
+}
+function buildPetRow(){
+  const row=document.getElementById('petRow');if(!row)return;row.replaceChildren();
+  const selected=selectedPetId();
+  const control=makeAssetSelect('Pet',PET_DEFS.map(d=>[d.id,d.label]),selected,selectPet);control.select.id='petSelect';row.appendChild(control.wrap);
+  const note=document.createElement('div');note.className='asset-note';note.textContent='All 11 deployed companions are selectable. Switching first unloads the previous model, so legacy pets cannot bleed through.';row.appendChild(note);
+}
+function selectPet(id){
+  if(!PET_DEFS.some(d=>d.id===id))id='hero';
+  try{localStorage.setItem(petStoreKey(),id);}catch(e){}
+  loadSelectedPet(CHARACTERS[charIdx]);Live.syncPersona&&Live.syncPersona();
+}
+function loadSelectedPet(hc=CHARACTERS[charIdx]){
+  const id=selectedPetId(hc),def=PET_DEFS.find(d=>d.id===id)||PET_DEFS[0];PET.selection=id;
+  const select=document.getElementById('petSelect');if(select)select.value=id;
+  if(id==='none'){
+    ++PET.token;PET.file=null;PET.loading=false;PET.preservePalette=false;unloadPet();persona.petName='No companion';markPicks();return;
+  }
+  const file=def.file||(hc&&hc.petFile)||'pet.glb';
+  const name=def.name||(hc&&hc.pet)||'Ember';
+  const tint=(id==='hero'&&hc&&hc.petTint)||(def.tint)||(hc&&hc.petTint)||PET.tint;
+  PET.preservePalette=!!def.preservePalette;if(tint)PET.tint=tint;
+  persona.petName=name+' the companion';
+  if(!PET.preservePalette)tintPet(PET.tint);
+  loadPet(file);GEAR.accent=tint||GEAR.accent;markPicks();
+}
 function unloadPet(){
   PET.ready=false;PET.gest=null;PET.cur=null;PET.acts={};
   stopMixer(PET.mixer,PET.model);
@@ -1189,12 +1255,12 @@ async function loadPet(file){ // per-hero pets (Ultimate Monsters, CC0) — fall
     PET.idleName=(g.animations.find(a=>/flying_idle/i.test(a.name))||g.animations.find(a=>/fly|idle/i.test(a.name))||g.animations[0]||{}).name;
     PET.mixer.addEventListener('finished',()=>playPetIdle());
     playPetIdle();
-    tintPet(PET.tint);
+    if(!PET.preservePalette)tintPet(PET.tint);
     PET.loading=false;PET.ready=true;PET.root.visible=APP_SHARED_CONFIG.pet.enabled!==false;
   }catch(e){
     if(my!==PET.token)return;
     PET.loading=false;console.warn('pet load failed',file,e);
-    if(file!=='pet.glb'){PET.file=null;loadPet('pet.glb');}else PET.file=null;
+    if(file!=='pet.glb'){PET.file=null;PET.preservePalette=false;loadPet('pet.glb');}else PET.file=null;
   }
 }
 function _petShade(hex,f){const c=new THREE.Color(hex);const h={h:0,s:0,l:0};c.getHSL(h);c.setHSL(h.h,Math.min(1,h.s*1.05),Math.max(0.04,Math.min(0.96,h.l*f)));return c;}
@@ -1269,17 +1335,89 @@ function updatePet(dt,now){
    play DIRECTLY (same bone names — no retarget). No visemes/expressions/springbones: the rig
    has no face; talking uses Idle_Talking_Loop body language. Suit tint + light/dark skin swap
    + optional body-space hairstyle pieces that follow the Head bone. */
-const UNI={active:false,scene:null,acts:{},cur:null,curName:null,base:null,baseYaw:0,oneshotUntil:0,libs:null,token:0,gripPose:[],palmBones:[]};
+const UNI={active:false,scene:null,acts:{},cur:null,curName:null,base:null,baseYaw:0,oneshotUntil:0,libs:null,packs:[],token:0,gripPose:[],palmBones:[]};
 const UNI_TAG2CLIP={greet_wave:['Idle_Rail_Call',1],wave_goodbye:['Idle_Rail_Call',1],excited_jump:['Jump_Start',1],laugh:['Yes',1],giggle:['Yes',1],nod:['Yes',1],shake_head:['Idle_No_Loop',1],think_chin:['Idle_FoldArms_Loop',0,2.6],shrug:['Idle_No_Loop',1],cheer:['Chest_Open',1],clap:['Chest_Open',1],dance:['Dance_Loop',0,4.2],sad_slump:['Idle_FoldArms_Loop',0,2.6],hero_pose:['Chest_Open',1],flex:['Chest_Open',1],twirl:['Roll',1],lean_in:['Interact',1],bow:['Interact',1],startle:['Hit_Chest',1],pet_the_pet:['Fixing_Kneeling',1],spell_cast:['Spell_Simple_Shoot',1],sword_slash:['Sword_Attack',1],backflip:['Roll',1],float_meditate:['Sitting_Idle_Loop',0,3.4],stretch:['Chest_Open',1],point_forward:['Interact',1],walk:['Jog_Fwd_Loop',0,2.6],run:['Sprint_Loop',0,2.4],sneak:['Crouch_Idle_Loop',0,2.6]};
 const UNI_GEAR_FIX=new THREE.Matrix4().makeRotationY(Math.PI); // UE hand_r orientation correction; position is anchored from the actual palm bones
 const UNI_OUTFIT_DEFS={
  m:[{id:'',label:'🦸 suit',file:'uni/uni_body_m.glb'},{id:'peasant',label:'🌾 peasant',file:'uni/uni_body_m_peasant.glb'},{id:'ranger',label:'🏹 ranger',file:'uni/uni_body_m_ranger.glb',hideHair:1},{id:'ranger_runic',label:'🌘 runic ranger',file:'uni/uni_body_m_ranger_runic.glb',hideHair:1}],
  f:[{id:'',label:'🦸 suit',file:'uni/uni_body_f.glb'},{id:'peasant',label:'🌾 peasant',file:'uni/uni_body_f_peasant.glb'},{id:'ranger',label:'🏹 ranger',file:'uni/uni_body_f_ranger.glb',hideHair:1},{id:'ranger_runic',label:'🌘 runic ranger',file:'uni/uni_body_f_ranger_runic.glb',hideHair:1}]
 };
+const UNI_HAIR_DEFS=[
+  {id:'default',label:'Hero default',file:null},{id:'none',label:'No scalp hair',file:''},
+  {id:'buns',label:'Buns',file:'uni/hair_buns.glb'},{id:'buzzed',label:'Buzzed',file:'uni/hair_buzzed.glb'},
+  {id:'buzzed_female',label:'Buzzed feminine',file:'uni/hair_buzzedfemale.glb'},{id:'long',label:'Long',file:'uni/hair_long.glb'},
+  {id:'simple_parted',label:'Simple parted',file:'uni/hair_simpleparted.glb'}
+];
+const UNI_FACIAL_HAIR_DEFS=[
+  {id:'default',label:'Hero default',file:null},{id:'none',label:'No facial hair',file:''},{id:'beard',label:'Beard',file:'uni/hair_beard.glb'}
+];
+const UNI_BROW_DEFS=[
+  {id:'default',label:'Hero default',file:null},{id:'none',label:'No eyebrows',file:''},
+  {id:'regular',label:'Regular eyebrows',file:'uni/eyebrows_regular.glb'},{id:'female',label:'Feminine eyebrows',file:'uni/eyebrows_female.glb'}
+];
+function uniAppearanceStoreKey(hc=CHARACTERS[charIdx]){return 'an_uni_appearance_'+characterStorageId(hc);}
+function readUniversalAppearance(hc=CHARACTERS[charIdx]){
+  try{const raw=localStorage.getItem(uniAppearanceStoreKey(hc)),value=raw?JSON.parse(raw):null;return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch(e){return {};}
+}
+function appearancePart(defs,id,authoredFile){
+  const def=defs.find(d=>d.id===id)||defs[0];
+  return {id:def.id,file:def.id==='default'?(authoredFile||''):(def.file||'')};
+}
+function resolveUniversalAppearance(hc){
+  const saved=readUniversalAppearance(hc),u=hc.uni||{};
+  return {
+    hair:appearancePart(UNI_HAIR_DEFS,saved.hair||'default',u.hair),
+    beard:appearancePart(UNI_FACIAL_HAIR_DEFS,saved.beard||'default',u.beard),
+    brows:appearancePart(UNI_BROW_DEFS,saved.brows||'default','')
+  };
+}
+function saveUniversalAppearancePart(part,id){
+  const hc=CHARACTERS[charIdx];if(!hc||hc.type!=='universal')return;
+  const saved=readUniversalAppearance(hc);
+  if(id==='default')delete saved[part];else saved[part]=id;
+  try{localStorage.setItem(uniAppearanceStoreKey(hc),JSON.stringify(saved));}catch(e){}
+  loadCharacter(charIdx);
+}
+function buildAppearanceRow(){
+  const row=document.getElementById('appearanceRow');if(!row)return;row.replaceChildren();
+  const hc=CHARACTERS[charIdx],enabled=!!(hc&&hc.type==='universal');
+  const appearance=enabled?resolveUniversalAppearance(hc):{hair:{id:'default'},beard:{id:'default'},brows:{id:'default'}};
+  row.appendChild(makeAssetSelect('Hair',UNI_HAIR_DEFS.map(d=>[d.id,d.label]),appearance.hair.id,v=>saveUniversalAppearancePart('hair',v),!enabled).wrap);
+  row.appendChild(makeAssetSelect('Facial hair',UNI_FACIAL_HAIR_DEFS.map(d=>[d.id,d.label]),appearance.beard.id,v=>saveUniversalAppearancePart('beard',v),!enabled).wrap);
+  row.appendChild(makeAssetSelect('Head · eyebrows',UNI_BROW_DEFS.map(d=>[d.id,d.label]),appearance.brows.id,v=>saveUniversalAppearancePart('brows',v),!enabled).wrap);
+  const note=document.createElement('div');note.className='asset-note';
+  note.textContent=enabled?((UNI_OUTFIT_DEFS[UNI.gender||'m']||[]).find(d=>d.id===UNI.outfit)?.hideHair?'The equipped hood hides scalp hair; facial hair and eyebrows remain active.':'Every head part from Universal Base Characters is available.'):'Head-part assets are authored for the new Universal heroes.';
+  row.appendChild(note);
+}
+function catalogAnimationLoops(name){return /(?:_Loop|Idle|Aim_|Driving|Push|Swim|Walk|Jog|Sprint)/i.test(name);}
+function playCatalogAnimation(key){
+  const action=UNI.acts[key];if(!UNI.active||!action)return;
+  const name=action.getClip().name,loops=catalogAnimationLoops(name);
+  uniPlay(key,!loops,loops?8:0);
+}
+function buildAnimationRow(){
+  const row=document.getElementById('animRow');if(!row)return;row.replaceChildren();
+  const line=document.createElement('div');line.className='asset-action';
+  const select=document.createElement('select');select.className='art-style-select';
+  const enabled=!!(UNI.active&&UNI.packs.length);
+  let count=0,first='';
+  if(enabled)for(const pack of UNI.packs){
+    const group=document.createElement('optgroup');group.label=pack.label;
+    for(const clip of pack.clips){const opt=document.createElement('option');opt.value=pack.id+':'+clip.name;opt.textContent=clip.name;group.appendChild(opt);if(!first)first=opt.value;count++;}
+    select.appendChild(group);
+  }else{const opt=document.createElement('option');opt.textContent='Choose a new Universal hero';select.appendChild(opt);}
+  select.disabled=!enabled;
+  const current=UNI.curName&&UNI.curName.includes(':')?UNI.curName:UNI.packs.flatMap(p=>p.clips.map(c=>p.id+':'+c.name)).find(k=>k.endsWith(':'+UNI.curName));
+  if(enabled)select.value=current||first;
+  const play=document.createElement('button');play.className='pbtn';play.type='button';play.textContent='Play';play.disabled=!enabled;play.addEventListener('click',()=>playCatalogAnimation(select.value));
+  line.append(select,play);row.appendChild(line);
+  const note=document.createElement('div');note.className='asset-note';note.textContent=enabled?`${count} clips loaded from both Universal Animation Library packs. Looping clips preview for eight seconds.`:'The two source animation packs use the Universal skeleton and are available on the new heroes.';row.appendChild(note);
+}
+function uniOutfitStoreKey(hc=CHARACTERS[charIdx]){return 'an_uni_outfit_'+characterStorageId(hc);}
 async function uniApplyOutfit(id){
   if(!UNI.active)return;
   UNI.outfit=id||'';
-  try{localStorage.setItem('an_uni_outfit_'+(UNI.gender||'m'),UNI.outfit);}catch(e){}
+  try{localStorage.setItem(uniOutfitStoreKey(),UNI.outfit);}catch(e){}
   markOutfitPicks();
   const hc=CHARACTERS[charIdx];
   if(hc&&hc.type==='universal')loadCharacter(charIdx); // dressed bodies are baked files — reload swaps the whole look
@@ -1296,8 +1434,9 @@ async function loadUniversalLibs(){
   if(!UNI.libs)UNI.libs=(async()=>{
     const L=new GLTFLoader();
     const [a,b]=await Promise.all([L.loadAsync('uni/ual1.glb'),L.loadAsync('uni/ual2.glb')]);
-    const clips={};for(const c of [...a.animations,...b.animations])clips[c.name]=c;
-    return clips;
+    const packs=[{id:'ual1',label:'Animation Pack 1',clips:a.animations},{id:'ual2',label:'Animation Pack 2',clips:b.animations}];
+    const clips={};for(const pack of packs)for(const c of pack.clips)if(!clips[c.name])clips[c.name]=c;
+    return {clips,packs};
   })();
   return UNI.libs;
 }
@@ -1339,14 +1478,15 @@ async function loadUniversalHero(hc,loadToken){
   try{
     const L=new GLTFLoader();
     const gen=(hc.url||hc.file).includes('_f')?'f':'m';
-    let sel=null;try{sel=localStorage.getItem('an_uni_outfit_'+gen);}catch(e){}
+    let sel=null;try{sel=localStorage.getItem(uniOutfitStoreKey(hc));}catch(e){}
     if(sel===null||sel===undefined)sel=(hc.uni&&hc.uni.outfit)||'';
     const odef=(UNI_OUTFIT_DEFS[gen]||[]).find(d=>d.id===sel);
     const bodyFile=(odef&&odef.file)||hc.url||hc.file;
     UNI.outfit=odef?sel:'';
-    const [g,clips]=await Promise.all([
+    const [g,libs]=await Promise.all([
       L.loadAsync(bodyFile,e=>{if(loadToken===heroLoadToken&&e.total)loadPct.textContent='character '+Math.min(100,Math.round(e.loaded/e.total*100))+'%';}),
       loadUniversalLibs()]);
+    const clips=libs.clips;
     pendingRoot=g.scene;
     if(my!==UNI.token||loadToken!==heroLoadToken){disposeObject3D(pendingRoot);return;}
     if(vrm){stopMixer(mixer,vrm.scene);scene.remove(vrm.scene);try{VRMUtils.deepDispose(vrm.scene);}catch(e){}vrm=null;}
@@ -1361,6 +1501,7 @@ async function loadUniversalHero(hc,loadToken){
     const bb2=new THREE.Box3().setFromObject(root);root.position.y-=bb2.min.y;
     root.rotation.y=UNI.baseYaw;
     const u=hc.uni||{};
+    const appearance=resolveUniversalAppearance(hc);
     root.traverse(o=>{o.frustumCulled=false;if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.userData.environmentProtected=true;
       const mats=Array.isArray(o.material)?o.material:[o.material];
       for(const m of mats){
@@ -1375,35 +1516,43 @@ async function loadUniversalHero(hc,loadToken){
         if(/MI_Hair/i.test(m.name)&&u.hairTint)m.color=new THREE.Color(u.hairTint);
       }
     }});
-    if((u.hair&&!(odef&&odef.hideHair))||u.beard){
+    const baseBrows=root.getObjectByName('Eyebrows');
+    if(baseBrows)baseBrows.visible=appearance.brows.id==='default';
+    const headParts=[
+      {file:(odef&&odef.hideHair)?'':appearance.hair.file,role:'hair'},
+      {file:appearance.beard.file,role:'facial-hair'},
+      {file:appearance.brows.file,role:'eyebrows'}
+    ].filter(p=>p.file);
+    if(headParts.length){
       const head=root.getObjectByName('Head');
-      if(head)for(const hp of [(odef&&odef.hideHair)?null:u.hair,u.beard].filter(Boolean)){
-        try{const hg=await L.loadAsync(hp);
+      if(head)for(const part of headParts){
+        try{const hg=await L.loadAsync(part.file);
           if(my!==UNI.token||loadToken!==heroLoadToken){disposeObject3D(hg.scene);disposeObject3D(root);return;}
-          const hs=hg.scene;
+          const hs=hg.scene;hs.name='AnimacyHeadPart_'+part.role;
           hs.traverse(o=>{if(o.isMesh){o.frustumCulled=false;const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms){if(m&&u.hairTint)m.color=new THREE.Color(u.hairTint);}}});
           attachUniversalHeadPiece(root,head,hs);
-        }catch(e){console.warn('hairstyle attach failed',hp,e);}
+        }catch(e){if(part.role==='eyebrows'&&baseBrows)baseBrows.visible=true;console.warn('head-part attach failed',part.file,e);}
       }
     }
     scene.add(root);
     pendingRoot=null;
     UNI.scene=root;UNI.active=true;UNI.outfitGrp=null;
     UNI.gender=gen;
+    UNI.packs=libs.packs;
     UNI.palmBones=['index_01_r','middle_01_r','ring_01_r','pinky_01_r'].map(n=>root.getObjectByName(n)).filter(Boolean);
     UNI.gripPose=buildUniversalGripPose(root,clips);
     mixer=new THREE.AnimationMixer(root);
-    UNI.acts={};for(const n in clips){try{UNI.acts[n]=mixer.clipAction(clips[n]);}catch(e){}}
+    UNI.acts={};
+    for(const pack of libs.packs)for(const clip of pack.clips){try{
+      const action=mixer.clipAction(clip);UNI.acts[pack.id+':'+clip.name]=action;if(!UNI.acts[clip.name])UNI.acts[clip.name]=action;
+    }catch(e){}}
     UNI.cur=null;UNI.base=null;uniPlay('Idle_Loop',false);UNI.base='Idle_Loop';
     avatarReady=true;
-    try{buildOutfitRow();}catch(e){}
+    try{buildOutfitRow();buildAppearanceRow();buildAnimationRow();}catch(e){}
     currentOutfit='';
     if(hc&&(hc.persona||hc.name)){
       persona.name=hc.persona||hc.name;if(hc.archetype)persona.archetype=hc.archetype;
-      persona.petName=(hc.pet||'Ember')+' the baby dragon';
-      tintPet(hc.petTint||null);
-      loadPet(hc.petFile||'pet.glb');
-      GEAR.accent=hc.petTint||GEAR.accent;
+      buildPetRow();loadSelectedPet(hc);
       document.getElementById('nameChip').textContent=persona.name;
       document.getElementById('capWho').textContent=persona.name+':';
       Live.syncPersona&&Live.syncPersona();
@@ -1432,6 +1581,7 @@ const GEAR_DEFS={
   pickaxe_bronze:{url:'gear_pickaxe_bronze.glb',len:0.72,pos:[0.01,0.02,0.04],rot:[-Math.PI/2,0,0],gripY:0.02,adjustPos:[0.02,0,-0.03],adjustRot:[0,0,0],arm:[-4,0,14,0,0,0,0,0,0]},
   shield_wooden:{url:'gear_shield_wooden.glb',len:0.55,pos:[0.01,0.02,0.04],rot:[-Math.PI/2,0,0],gripY:0.0,adjustPos:[0,0,0],adjustRot:[0,0,0],arm:[0,0,0,0,0,0,0,0,0]}
 };
+const GEAR_LABELS={sword:'🗡️ sword',staff:'🪄 staff',wand:'✨ wand',sword_runic:'🌘 runic sword',staff_runic:'🌘 runic staff',wand_runic:'🌘 runic wand',sword_bronze:'⚔️ bronze sword',axe_bronze:'🪓 bronze axe',pickaxe_bronze:'⛏️ pickaxe',shield_wooden:'🛡️ shield'};
 const GEAR={id:null,tier:0,socket:null,model:null,glow:null,parts:null,mats:[],accent:'#2DD4BF',burstT:-9,ready:false,token:0,off:null,uniOff:null,uniGrip:null};
 var _glowTex=null;
 function glowTex(){
@@ -1802,22 +1952,19 @@ function markPicks(){
   document.querySelectorAll('#sceneRow .scx').forEach(b=>b.classList.toggle('on',b.dataset.k===curScene));
   document.querySelectorAll('#tintRow .swx').forEach(b=>b.classList.toggle('on',tintSel[b.dataset.g]===(b.dataset.c||null)));
 }
-let showClassic=false;try{showClassic=localStorage.getItem('an_classic')==='1';}catch(e){}
 function buildCharRow(){
   const cr=document.getElementById('charRow');
-  cr.querySelectorAll('.pbtn').forEach(b=>b.remove());
-  CHARACTERS.forEach((c,i)=>{
-    if(c.classic&&!showClassic)return;
-    const b=document.createElement('button');b.className='pbtn';b.dataset.idx=String(i);
-    b.textContent=(c.classic?'🕰️ ':'')+c.name;
-    b.addEventListener('click',()=>{loadCharacter(i);closeDrawers();});cr.appendChild(b);});
-  const tg=document.createElement('button');tg.className='pbtn';tg.dataset.idx='-1';
-  tg.textContent=showClassic?'🕰️ hide classic cast':'🕰️ classic cast';
-  tg.addEventListener('click',()=>{showClassic=!showClassic;try{localStorage.setItem('an_classic',showClassic?'1':'0');}catch(e){}buildCharRow();markPicks();});
-  cr.appendChild(tg);
+  cr.querySelectorAll('.pbtn,.asset-group-title').forEach(b=>b.remove());
+  for(const [label,classic] of [['New Universal heroes',false],['Classic cast',true]]){
+    const heading=document.createElement('span');heading.className='asset-group-title';heading.textContent=label;cr.appendChild(heading);
+    CHARACTERS.forEach((c,i)=>{if(!!c.classic!==classic)return;
+      const b=document.createElement('button');b.className='pbtn';b.dataset.idx=String(i);b.textContent=(c.classic?'🕰️ ':'')+c.name;
+      b.addEventListener('click',()=>{loadCharacter(i);closeDrawers();});cr.appendChild(b);});
+  }
 }
 function buildPickers(){
   buildCharRow();
+  buildAppearanceRow();buildPetRow();buildAnimationRow();
   const tr=document.getElementById('tintRow');
   for(const g of ['hair','outfit','eyes']){
     const lb=document.createElement('span');lb.className='plabel';lb.textContent=g;tr.appendChild(lb);
@@ -1841,19 +1988,19 @@ function buildPickers(){
     ar.appendChild(b);
   }
   const wr=document.getElementById('worldRow');
-  for(const [k,label] of [['grass','🌿 grass'],['field','🍂 field'],['stone','🪨 stone'],['snow','❄️ snow'],['sand','🏖️ sand'],['blossom','🌸 blossom'],['crystal','💎 crystal'],['runic','🌀 runic'],['village','🏘️ village']]){
+  for(const k of Object.keys(GROUND_CFG)){const label=GROUND_LABELS[k]||k;
     const b=document.createElement('button');b.className='pbtn';b.dataset.ground=k;b.textContent=label;
     b.addEventListener('click',()=>setGround(k));
     wr.appendChild(b);
   }
   const sl=document.createElement('span');sl.className='plabel';sl.textContent='sky';wr.appendChild(sl);
-  for(const [k,label] of [['day','☀️ day'],['sunset','🌇 sunset'],['dawn','🌅 dawn'],['dusk','🌆 dusk'],['night','🌙 night'],['mist','🌫️ mist'],['aurora','🪄 aurora'],['enchanted','🔮 enchanted']]){
+  for(const k of Object.keys(SKY_CFG)){const label=SKY_LABELS[k]||k;
     const b=document.createElement('button');b.className='pbtn';b.dataset.sky=k;b.textContent=label;
     b.addEventListener('click',()=>setSky(k));
     wr.appendChild(b);
   }
   const gr=document.getElementById('gearRow');
-  for(const [k,label] of [['','🚫 none'],['sword','🗡️ sword'],['staff','🪄 staff'],['wand','✨ wand'],['sword_runic','🌘 runic sword'],['staff_runic','🌘 runic staff'],['wand_runic','🌘 runic wand'],['sword_bronze','⚔️ bronze sword'],['axe_bronze','🪓 bronze axe'],['pickaxe_bronze','⛏️ pickaxe'],['shield_wooden','🛡️ shield']]){
+  for(const k of ['',...Object.keys(GEAR_DEFS)]){const label=k?(GEAR_LABELS[k]||k):'🚫 none';
     const b=document.createElement('button');b.className='pbtn';b.dataset.gear=k;b.textContent=label;
     b.addEventListener('click',()=>equipGear(k||null));
     gr.appendChild(b);
@@ -1878,21 +2025,22 @@ async function detectHeroModels(){
     const r=await fetch('heroes.json');
     if(r.ok){
       const list=await r.json();
-      for(const h of list){
+      const checked=await Promise.all(list.map(async h=>{
         try{const head=await fetch(h.file,{method:'HEAD'});
           const ct=(head.headers&&head.headers.get&&head.headers.get('content-type'))||'';
-          if(head.ok&&!/text\/html/i.test(ct))found.push({...h,id:h.file,url:h.file,persona:h.name}); // spread fields; reject SPA-rewrite HTML masquerading as assets
-        }catch(e){}
-      }
+          if(head.ok&&!/text\/html/i.test(ct))return {...h,id:h.file,url:h.file,persona:h.name}; // reject SPA-rewrite HTML masquerading as assets
+        }catch(e){}return null;
+      }));
+      found.push(...checked.filter(Boolean));
     }
   }catch(e){}
   if(!found.length){ // fallback: probe for bare hero files
-    for(const f of ['hero.vrm','hero2.vrm','hero3.vrm','hero4.vrm']){
+    const checked=await Promise.all(['hero.vrm','hero2.vrm','hero3.vrm','hero4.vrm'].map(async f=>{
       try{const r=await fetch(f,{method:'HEAD'});
-        if(r.ok)found.push({id:f,name:f.replace('.vrm','').replace(/^h/,'H'),url:f});}catch(e){}
-    }
+        if(r.ok)return {id:f,name:f.replace('.vrm','').replace(/^h/,'H'),url:f};}catch(e){}return null;
+    }));found.push(...checked.filter(Boolean));
   }
-  for(const c of found.reverse())CHARACTERS.unshift(c);
+  CHARACTERS.push(...found);
   return found.length;
 }
 
@@ -1919,7 +2067,7 @@ function applyAppSharedConfig(cfg){
   if(WORLD.parts){WORLD.parts.material.size=.038*APP_SHARED_CONFIG.particles.size;WORLD.parts.material.opacity=.4*APP_SHARED_CONFIG.particles.opacity;WORLD.parts.material.color.set(APP_SHARED_CONFIG.particles.color);WORLD.parts.geometry.setDrawRange(0,Math.round(WORLD.parts.geometry.attributes.position.count*Math.min(1,APP_SHARED_CONFIG.particles.density)));}
   if(WORLD.orbs)for(let i=0;i<WORLD.orbs.length;i++){const o=WORLD.orbs[i];o.visible=i<Math.round(WORLD.orbs.length*Math.min(1,APP_SHARED_CONFIG.magic.orbDensity));o.material.color.set(APP_SHARED_CONFIG.magic.color);o.material.opacity=.55*APP_SHARED_CONFIG.magic.intensity;}
   if(WORLD.butterflies)for(let i=0;i<WORLD.butterflies.length;i++)WORLD.butterflies[i].visible=i<Math.round(WORLD.butterflies.length*Math.min(1,APP_SHARED_CONFIG.magic.butterflyDensity));
-  if(PET.ready){tintPet(APP_SHARED_CONFIG.pet.tint);PET.root.visible=APP_SHARED_CONFIG.pet.enabled!==false;}
+  if(PET.ready){if(!PET.preservePalette)tintPet(APP_SHARED_CONFIG.pet.tint);PET.root.visible=APP_SHARED_CONFIG.pet.enabled!==false;}
   setSharedWeather(APP_SHARED_CONFIG.weather.type||env.weather||'clear');
   if(APP_SHARED_CONFIG.gear.weapon!==undefined&&APP_SHARED_CONFIG.gear.weapon!==(GEAR.id||''))equipGear(APP_SHARED_CONFIG.gear.weapon||null);if(Number.isFinite(APP_SHARED_CONFIG.gear.enchantment))applyEnchant(APP_SHARED_CONFIG.gear.enchantment);
   applyPremiumPresentation();markPicks?.();
@@ -1939,7 +2087,7 @@ document.getElementById('drawerScrim').addEventListener('click',closeDrawers);
 document.querySelectorAll('.drawer-close').forEach(b=>b.addEventListener('click',closeDrawers));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawers();});
 function mountControls(){
-  const moves=[['chips','quickMount'],['archRow','archMount'],['charRow','charMount'],['outfitRow','outfitMount'],['gearRow','gearMount'],['tintRow','tintMount'],['worldRow','worldMount'],['sceneRow','sceneMount']];
+  const moves=[['chips','quickMount'],['animRow','animMount'],['archRow','archMount'],['charRow','charMount'],['appearanceRow','appearanceMount'],['outfitRow','outfitMount'],['petRow','petMount'],['gearRow','gearMount'],['tintRow','tintMount'],['worldRow','worldMount'],['sceneRow','sceneMount']];
   for(const [id,mount] of moves){const el=document.getElementById(id),dst=document.getElementById(mount);if(el&&dst)dst.appendChild(el);}
 }
 mountControls();
@@ -1951,7 +2099,7 @@ window.addEventListener('pagehide',()=>{suspended=true;});
 window.addEventListener('pageshow',()=>{suspended=false;clock.stop();clock.start();transitionUntil=0;vrm?.springBoneManager?.reset?.();});
 window.addEventListener('webglcontextlost',e=>{e.preventDefault();suspended=true;showErr('Graphics paused. Restoring…');});
 window.addEventListener('webglcontextrestored',()=>{suspended=false;errBox.style.display='none';renderer.compile(scene,camera);});
-const APP_BUILD='2026.07.15-hero-pet-stability-v10';
+const APP_BUILD='2026.07.15-complete-asset-catalog-v11';
 console.info('[Animacy build]',APP_BUILD);
 /* preview: service worker disabled */
 
