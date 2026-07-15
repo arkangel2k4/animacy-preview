@@ -170,27 +170,5 @@
     "pet": "Acorn",
     "petTint": "#6B8F3D",
     "petFile": "pets/pet_mushnub.glb"
-  },
-  {
-    "name": "Alia",
-    "file": "characters/alia/alia-desktop.glb",
-    "mobileFile": "characters/alia/alia-mobile.glb",
-    "type": "cc-glb",
-    "classic": true,
-    "archetype": "sage",
-    "pet": "Luma",
-    "petTint": "#d7a6ff",
-    "petFile": "pets/pet_hywirl.glb"
-  },
-  {
-    "name": "Jonny",
-    "file": "characters/jonny/jonny-desktop.glb",
-    "mobileFile": "characters/jonny/jonny-mobile.glb",
-    "type": "cc-glb",
-    "classic": true,
-    "archetype": "champion",
-    "pet": "Ember",
-    "petTint": "#e0a56a",
-    "petFile": "pets/pet_dragon.glb"
   }
 ]
