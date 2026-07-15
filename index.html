@@ -222,6 +222,7 @@ window.fetch=async function(input,init){
 /* ================== CONFIG ================== */
 const CHARACTERS=[]; // filled from public/heroes.json (see detectHeroModels) — the Animacy hero cast
 let charIdx=0;
+let heroLoadToken=0;
 const persona={name:'Kaelen',archetype:'champion',petName:'Ember the baby dragon'};
 const MOCAP_URL='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r164/examples/models/gltf/Xbot.glb';
 
@@ -235,6 +236,31 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>t<0?0:t>1?1:t*t*(3-2*t);
 const sin01=t=>Math.sin(clamp(t,0,1)*Math.PI);
 function perf(){return performance.now()/1000;}
+
+/* Dispose replaced GLTFs instead of leaving their GPU allocations behind.  The
+   preview swaps heroes, outfits, pets and gear often, so removeFromParent alone
+   eventually turns every customization pass into permanent memory pressure. */
+function disposeObject3D(root,disposeTextures=true){
+  if(!root)return;
+  const geos=new Set(),mats=new Set(),texs=new Set(),skeletons=new Set();
+  root.traverse(o=>{
+    if(o.geometry)geos.add(o.geometry);
+    if(o.skeleton)skeletons.add(o.skeleton);
+    if(!o.material)return;
+    for(const m of (Array.isArray(o.material)?o.material:[o.material])){
+      if(!m||mats.has(m))continue;mats.add(m);
+      if(disposeTextures)for(const v of Object.values(m))if(v&&v.isTexture&&!v.userData?.animacyShared)texs.add(v);
+    }
+  });
+  for(const g of geos)g.dispose?.();
+  for(const s of skeletons)s.dispose?.();
+  for(const m of mats)m.dispose?.();
+  for(const t of texs)t.dispose?.();
+}
+function stopMixer(targetMixer,root){
+  if(!targetMixer)return;
+  try{targetMixer.stopAllAction();if(root)targetMixer.uncacheRoot(root);}catch(e){}
+}
 
 const APP_SHARED_CONFIG={version:3,environment:{scene:'meadow',ground:'grass',sky:'day',weather:'clear',fogNear:60,fogFar:200,cloudDensity:1.55,cloudOpacity:1.08,cloudSpeed:.72,grassDensity:1.55,treeDensity:1.35,flowerDensity:1.45,bushDensity:1.3,vineDensity:1.4,rockDensity:1.05},camera:{distance:7,minDistance:1.85,maxDistance:11.5,targetY:1.08,fov:30,damping:.085,rotateSpeed:.65,zoomSpeed:.8,panSpeed:.65,autoRotate:false,autoRotateSpeed:.35},pet:{enabled:true,scale:1,x:.62,y:1.26,z:.18,bob:.045,sway:.05,orbitRadius:0,orbitSpeed:.4,tint:'#2DD4BF',glow:.25},particles:{density:1,size:1,speed:1,opacity:1,color:'#90F5D0'},magic:{intensity:1,orbDensity:1,butterflyDensity:1,glow:1,color:'#8AF0D8'},weather:{type:'clear',intensity:1,wind:.35,speed:1},fingers:{strength:1,index:1,middle:1,ring:1,little:1,thumbOpposition:1,thumbCurl:1},gear:{weapon:'sword',enchantment:0},lab:{guides:true,mirror:false,twoHanded:false}};
 function mergeShared(base,next){if(!next||typeof next!=='object'||Array.isArray(next))return base;for(const [k,v] of Object.entries(next)){if(v&&typeof v==='object'&&!Array.isArray(v))base[k]=mergeShared(base[k]||{},v);else base[k]=v}return base}
@@ -295,9 +321,11 @@ function applyStreetwearWardrobe(targetVrm,file){
 
 /* ================== three scene ================== */
 const canvas=document.getElementById('stage');
+const DEVICE_IS_CONSTRAINED=/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)||(navigator.deviceMemory&&navigator.deviceMemory<=4)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||innerWidth<760;
+let renderDpr=Math.max(1,Math.min(devicePixelRatio||1,DEVICE_IS_CONSTRAINED?1.35:1.75));
 const renderer=new THREE.WebGLRenderer({canvas,antialias:!matchMedia('(max-resolution: 1.5dppx)').matches,alpha:true,powerPreference:'high-performance',stencil:false,preserveDrawingBuffer:false});
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));
+renderer.setPixelRatio(renderDpr);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(30,1,0.1,500);
 const CAMERA_DEFAULT_DISTANCE=7.0;
@@ -615,8 +643,8 @@ function updateWorld(dt,now){
 initWorld();
 
 
-function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
-  renderer.setSize(r.width,r.height,false);renderer.setPixelRatio(dpr);
+function resize(){const r=canvas.getBoundingClientRect();
+  renderer.setSize(r.width,r.height,false);renderer.setPixelRatio(renderDpr);
   camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
@@ -773,46 +801,48 @@ function buildBundleActions(){
   if(n)console.log('mocap bundle:',n,'clips,',Object.keys(variants).length,'variant pools');
 }
 async function loadCharacter(i){
+  const loadToken=++heroLoadToken;
   charIdx=((i%CHARACTERS.length)+CHARACTERS.length)%CHARACTERS.length;
-  const hcu=CHARACTERS[charIdx];
-  if(hcu&&hcu.type==='universal')return loadUniversalHero(hcu); // stage-4 parallel pipeline
+  const hc=CHARACTERS[charIdx];
+  if(hc&&hc.type==='universal')return loadUniversalHero(hc,loadToken); // stage-4 parallel pipeline
   UNI.token++; // cancel any in-flight universal load
   loadBox.style.display='flex';loadPct.textContent='';
   try{
     const loader=new GLTFLoader();loader.register(p=>new VRMLoaderPlugin(p));
-    const gltf=await loader.loadAsync(CHARACTERS[charIdx].url,e=>{if(e.total)loadPct.textContent='character '+Math.min(100,Math.round(e.loaded/e.total*100))+'%';});
-    if(vrm){scene.remove(vrm.scene);try{VRMUtils.deepDispose(vrm.scene);}catch(e){}}
-    if(UNI.scene){scene.remove(UNI.scene);UNI.scene=null;UNI.active=false;}
+    const gltf=await loader.loadAsync(hc.url,e=>{if(loadToken===heroLoadToken&&e.total)loadPct.textContent='character '+Math.min(100,Math.round(e.loaded/e.total*100))+'%';});
+    if(loadToken!==heroLoadToken){try{VRMUtils.deepDispose(gltf.userData.vrm?.scene||gltf.scene);}catch(e){}return;}
+    await ensureMocap();
+    if(loadToken!==heroLoadToken){try{VRMUtils.deepDispose(gltf.userData.vrm?.scene||gltf.scene);}catch(e){}return;}
+    await ensureBundle();
+    if(loadToken!==heroLoadToken){try{VRMUtils.deepDispose(gltf.userData.vrm?.scene||gltf.scene);}catch(e){}return;}
+    if(vrm){stopMixer(mixer,vrm.scene);scene.remove(vrm.scene);try{VRMUtils.deepDispose(vrm.scene);}catch(e){}vrm=null;}
+    if(UNI.scene){stopMixer(mixer,UNI.scene);scene.remove(UNI.scene);disposeObject3D(UNI.scene);UNI.scene=null;UNI.active=false;UNI.gripPose=[];UNI.palmBones=[];}
     GEAR.hand=null; // re-resolved by attachGear() once the new hero is in
     activeGestures.length=0;current=null;
     for(const k in actions)delete actions[k];
     vrm=gltf.userData.vrm;
     VRMUtils.rotateVRM0(vrm);
-    applyStreetwearWardrobe(vrm,CHARACTERS[charIdx].url);
+    applyStreetwearWardrobe(vrm,hc.url);
     cacheControlledPose();
     baseYaw=vrm.scene.rotation.y; // VRM0 models get a PI flip — the anim loop must preserve it
     scene.add(vrm.scene);
     avatarReady=false;
     vrm.scene.visible=false;
     vrm.scene.traverse(o=>{o.frustumCulled=false;if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});
-    await ensureMocap();
     mixer=new THREE.AnimationMixer(vrm.scene);
     for(const clip of mocapGltf.animations){
       const rc=retargetClip(mocapGltf.scene,clip,vrm);
       if(rc.tracks.length)actions[clip.name]=mixer.clipAction(rc);
     }
-    await ensureBundle();
     buildBundleActions();
     mixer.addEventListener('finished',e=>{if(e.action===current)playBase();});
     collectTints();applyTints();
     // Warm animation and spring-bone state while hidden to prevent first-frame skirt explosions.
     for(let warm=0;warm<10;warm++){mixer.update(1/60);vrm.update(1/60);}
     vrm.scene.position.set(0,0,0);vrm.springBoneManager?.reset?.();vrm.scene.visible=true;avatarReady=true;
-    renderer.compile(scene,camera);
     playIdle();
     buildOutfitRow();currentOutfit='';
     try{const so=localStorage.getItem(outfitStoreKey());if(so)applyOutfit(so,false);}catch(e){}
-    const hc=CHARACTERS[charIdx];
     if(hc&&hc.persona){
       persona.name=hc.persona;if(hc.archetype)persona.archetype=hc.archetype;
       persona.petName=(hc.pet||'Ember')+' the baby dragon';
@@ -826,12 +856,14 @@ async function loadCharacter(i){
     attachGear();applyEnchant(GEAR.tier);applyPremiumPresentation();
     markPicks();
   }catch(e){
+    if(loadToken!==heroLoadToken)return;
     showErr('Character failed to load: '+(e.message||e));
     loadBox.style.display='none';
     if(!avatarReady&&CHARACTERS.length>1&&(loadCharacter._skips=(loadCharacter._skips||0)+1)<CHARACTERS.length){
       return loadCharacter(charIdx+1); // fall forward — one broken entry must never brick boot
     }
   }
+  if(loadToken!==heroLoadToken)return;
   loadCharacter._skips=0;
   loadBox.style.display='none';
 }
@@ -1118,18 +1150,24 @@ function fireFx(id){
   }
 }
 /* ================== pet companion (M2: Quaternius CC0 dragon) ================== */
-const PET={root:null,model:null,mixer:null,gest:null,off:null,ready:false,tint:'#2DD4BF',SCALE:0.30,YAW:-0.45,file:null,token:0};
+const PET={root:null,model:null,mixer:null,gest:null,off:null,ready:false,loading:false,tint:'#2DD4BF',SCALE:0.30,YAW:-0.45,file:null,token:0};
+function unloadPet(){
+  PET.ready=false;PET.gest=null;PET.cur=null;PET.acts={};
+  stopMixer(PET.mixer,PET.model);
+  if(PET.root)scene.remove(PET.root);
+  disposeObject3D(PET.root||PET.model);
+  PET.root=null;PET.model=null;PET.mixer=null;PET.off=null;PET.idleName=null;
+}
 async function loadPet(file){ // per-hero pets (Ultimate Monsters, CC0) — falls back to pet.glb
   file=file||'pet.glb';
-  if(PET.file===file)return;
-  PET.file=file; const my=++PET.token;
+  if(PET.file===file&&(PET.ready||PET.loading))return;
+  const my=++PET.token;PET.file=file;PET.loading=true;
+  unloadPet(); // remove the previous companion before loading its replacement — never show both
   try{
     const loader=new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder); // Dragon_Evolved uses EXT_meshopt_compression
     const g=await loader.loadAsync(file);
-    if(my!==PET.token)return; // superseded by a later hero swap
-    if(PET.root){scene.remove(PET.root);PET.root=null;}
-    PET.ready=false;PET.cur=null;
+    if(my!==PET.token){disposeObject3D(g.scene);return;} // superseded by a later hero swap
     PET.model=g.scene;
     PET.model.rotation.y=PET.YAW; // angled toward camera
     // auto-fit: normalize any pet model to ~0.55 units tall, centered on its true center
@@ -1151,9 +1189,13 @@ async function loadPet(file){ // per-hero pets (Ultimate Monsters, CC0) — fall
     PET.idleName=(g.animations.find(a=>/flying_idle/i.test(a.name))||g.animations.find(a=>/fly|idle/i.test(a.name))||g.animations[0]||{}).name;
     PET.mixer.addEventListener('finished',()=>playPetIdle());
     playPetIdle();
-    tintPet(APP_SHARED_CONFIG.pet.tint||PET.tint);
-    PET.ready=true;PET.root.visible=APP_SHARED_CONFIG.pet.enabled!==false;applyPremiumPresentation();
-  }catch(e){console.warn('pet load failed',file,e);if(file!=='pet.glb'&&my===PET.token){PET.file=null;loadPet('pet.glb');}}
+    tintPet(PET.tint);
+    PET.loading=false;PET.ready=true;PET.root.visible=APP_SHARED_CONFIG.pet.enabled!==false;
+  }catch(e){
+    if(my!==PET.token)return;
+    PET.loading=false;console.warn('pet load failed',file,e);
+    if(file!=='pet.glb'){PET.file=null;loadPet('pet.glb');}else PET.file=null;
+  }
 }
 function _petShade(hex,f){const c=new THREE.Color(hex);const h={h:0,s:0,l:0};c.getHSL(h);c.setHSL(h.h,Math.min(1,h.s*1.05),Math.max(0.04,Math.min(0.96,h.l*f)));return c;}
 function tintPet(hex){
@@ -1226,10 +1268,10 @@ function updatePet(dt,now){
    Bodies: uni/uni_body_{m,f}.glb (65-joint mannequin skeleton). Anim library: uni/ual{1,2}.glb
    play DIRECTLY (same bone names — no retarget). No visemes/expressions/springbones: the rig
    has no face; talking uses Idle_Talking_Loop body language. Suit tint + light/dark skin swap
-   + optional hairstyle swap (origin-at-0 pieces parented to the Head bone). */
-const UNI={active:false,scene:null,acts:{},cur:null,curName:null,base:null,baseYaw:0,oneshotUntil:0,libs:null,token:0};
+   + optional body-space hairstyle pieces that follow the Head bone. */
+const UNI={active:false,scene:null,acts:{},cur:null,curName:null,base:null,baseYaw:0,oneshotUntil:0,libs:null,token:0,gripPose:[],palmBones:[]};
 const UNI_TAG2CLIP={greet_wave:['Idle_Rail_Call',1],wave_goodbye:['Idle_Rail_Call',1],excited_jump:['Jump_Start',1],laugh:['Yes',1],giggle:['Yes',1],nod:['Yes',1],shake_head:['Idle_No_Loop',1],think_chin:['Idle_FoldArms_Loop',0,2.6],shrug:['Idle_No_Loop',1],cheer:['Chest_Open',1],clap:['Chest_Open',1],dance:['Dance_Loop',0,4.2],sad_slump:['Idle_FoldArms_Loop',0,2.6],hero_pose:['Chest_Open',1],flex:['Chest_Open',1],twirl:['Roll',1],lean_in:['Interact',1],bow:['Interact',1],startle:['Hit_Chest',1],pet_the_pet:['Fixing_Kneeling',1],spell_cast:['Spell_Simple_Shoot',1],sword_slash:['Sword_Attack',1],backflip:['Roll',1],float_meditate:['Sitting_Idle_Loop',0,3.4],stretch:['Chest_Open',1],point_forward:['Interact',1],walk:['Jog_Fwd_Loop',0,2.6],run:['Sprint_Loop',0,2.4],sneak:['Crouch_Idle_Loop',0,2.6]};
-const UNI_GEAR_FIX=new THREE.Matrix4().makeRotationY(Math.PI).multiply(new THREE.Matrix4().makeTranslation(0,-0.01,-0.055)); // universal-hand correction: 180° flip + into-palm offset (was on the back of the hand)
+const UNI_GEAR_FIX=new THREE.Matrix4().makeRotationY(Math.PI); // UE hand_r orientation correction; position is anchored from the actual palm bones
 const UNI_OUTFIT_DEFS={
  m:[{id:'',label:'🦸 suit',file:'uni/uni_body_m.glb'},{id:'peasant',label:'🌾 peasant',file:'uni/uni_body_m_peasant.glb'},{id:'ranger',label:'🏹 ranger',file:'uni/uni_body_m_ranger.glb',hideHair:1},{id:'ranger_runic',label:'🌘 runic ranger',file:'uni/uni_body_m_ranger_runic.glb',hideHair:1}],
  f:[{id:'',label:'🦸 suit',file:'uni/uni_body_f.glb'},{id:'peasant',label:'🌾 peasant',file:'uni/uni_body_f_peasant.glb'},{id:'ranger',label:'🏹 ranger',file:'uni/uni_body_f_ranger.glb',hideHair:1},{id:'ranger_runic',label:'🌘 runic ranger',file:'uni/uni_body_f_ranger_runic.glb',hideHair:1}]
@@ -1240,7 +1282,7 @@ async function uniApplyOutfit(id){
   try{localStorage.setItem('an_uni_outfit_'+(UNI.gender||'m'),UNI.outfit);}catch(e){}
   markOutfitPicks();
   const hc=CHARACTERS[charIdx];
-  if(hc&&hc.type==='universal')loadUniversalHero(hc); // dressed bodies are baked files — reload swaps the whole look
+  if(hc&&hc.type==='universal')loadCharacter(charIdx); // dressed bodies are baked files — reload swaps the whole look
 }
 function uniPlay(name,once,hold){
   const a=UNI.acts[name];if(!a)return false;
@@ -1259,8 +1301,40 @@ async function loadUniversalLibs(){
   })();
   return UNI.libs;
 }
-async function loadUniversalHero(hc){
+function buildUniversalGripPose(root,clips){
+  const clip=clips.Sword_Idle||clips.Sword_Attack;const pose=[];
+  if(!clip)return pose;
+  const sampleAt=Math.min(0.25,clip.duration*0.5);
+  for(const track of clip.tracks){
+    const m=track.name.match(/(?:^|\/)((?:index|middle|ring|pinky|thumb)_0[1-3]_r)\.quaternion$/i);
+    if(!m)continue;
+    const bone=root.getObjectByName(m[1]);if(!bone)continue;
+    const value=track.createInterpolant().evaluate(sampleAt);
+    pose.push([bone,new THREE.Quaternion().fromArray(value)]);
+  }
+  return pose;
+}
+function applyUniversalGripPose(){
+  if(!UNI.active||!GEAR.ready||!GEAR.id)return;
+  for(const [bone,q] of UNI.gripPose)bone.quaternion.copy(q);
+}
+function attachUniversalHeadPiece(root,head,piece){
+  /* Hair assets are authored in full-body coordinates (their vertices already
+     sit around y=1.5–1.8).  Add them in body space first, then attach while
+     preserving the world transform so the Head bone does not add its height a
+     second time. */
+  root.add(piece);root.updateMatrixWorld(true);head.attach(piece);
+}
+const UNI_SKIN_TEXTURES=new Map();
+function universalSkinTexture(file){
+  if(UNI_SKIN_TEXTURES.has(file))return UNI_SKIN_TEXTURES.get(file);
+  const t=new THREE.TextureLoader().load(file);t.flipY=false;t.colorSpace=THREE.SRGBColorSpace;t.userData.animacyShared=true;
+  UNI_SKIN_TEXTURES.set(file,t);return t;
+}
+async function loadUniversalHero(hc,loadToken){
+  loadToken=loadToken||++heroLoadToken;
   const my=++UNI.token;
+  let pendingRoot=null;
   loadBox.style.display='flex';loadPct.textContent='';
   try{
     const L=new GLTFLoader();
@@ -1271,11 +1345,12 @@ async function loadUniversalHero(hc){
     const bodyFile=(odef&&odef.file)||hc.url||hc.file;
     UNI.outfit=odef?sel:'';
     const [g,clips]=await Promise.all([
-      L.loadAsync(bodyFile,e=>{if(e.total)loadPct.textContent='character '+Math.min(100,Math.round(e.loaded/e.total*100))+'%';}),
+      L.loadAsync(bodyFile,e=>{if(loadToken===heroLoadToken&&e.total)loadPct.textContent='character '+Math.min(100,Math.round(e.loaded/e.total*100))+'%';}),
       loadUniversalLibs()]);
-    if(my!==UNI.token)return;
-    if(vrm){scene.remove(vrm.scene);try{VRMUtils.deepDispose(vrm.scene);}catch(e){}vrm=null;}
-    if(UNI.scene){scene.remove(UNI.scene);UNI.scene=null;}
+    pendingRoot=g.scene;
+    if(my!==UNI.token||loadToken!==heroLoadToken){disposeObject3D(pendingRoot);return;}
+    if(vrm){stopMixer(mixer,vrm.scene);scene.remove(vrm.scene);try{VRMUtils.deepDispose(vrm.scene);}catch(e){}vrm=null;}
+    if(UNI.scene){stopMixer(mixer,UNI.scene);scene.remove(UNI.scene);disposeObject3D(UNI.scene);UNI.scene=null;UNI.active=false;}
     GEAR.hand=null;activeGestures.length=0;current=null;
     for(const k in actions)delete actions[k];
     avatarReady=false;nextIdleSwap=0;currentClipName=null;
@@ -1294,32 +1369,33 @@ async function loadUniversalHero(hc){
         if(/MI_Superhero/i.test(m.name)){
           if(u.suitTint)m.color=new THREE.Color(u.suitTint);
           if(u.skin==='light'){
-            const t=new THREE.TextureLoader().load((hc.url||hc.file).includes('_m')?'uni/uni_skin_m_light.jpg':'uni/uni_skin_f_light.jpg');
-            t.flipY=false;t.colorSpace=THREE.SRGBColorSpace;m.map=t;m.needsUpdate=true;
+            m.map=universalSkinTexture(gen==='m'?'uni/uni_skin_m_light.jpg':'uni/uni_skin_f_light.jpg');m.needsUpdate=true;
           }
         }
         if(/MI_Hair/i.test(m.name)&&u.hairTint)m.color=new THREE.Color(u.hairTint);
       }
-      if((u.hair||(odef&&odef.hideHair))&&/MI_Hair/i.test((mats[0]&&mats[0].name)||''))o.visible=false; // replaced by hairstyle swap or covered by a hood
     }});
     if((u.hair&&!(odef&&odef.hideHair))||u.beard){
       const head=root.getObjectByName('Head');
       if(head)for(const hp of [(odef&&odef.hideHair)?null:u.hair,u.beard].filter(Boolean)){
-        try{const hg=await L.loadAsync(hp);if(my!==UNI.token)return;
-          const hs=hg.scene;hs.position.set(0,0,0);
+        try{const hg=await L.loadAsync(hp);
+          if(my!==UNI.token||loadToken!==heroLoadToken){disposeObject3D(hg.scene);disposeObject3D(root);return;}
+          const hs=hg.scene;
           hs.traverse(o=>{if(o.isMesh){o.frustumCulled=false;const ms=Array.isArray(o.material)?o.material:[o.material];for(const m of ms){if(m&&u.hairTint)m.color=new THREE.Color(u.hairTint);}}});
-          head.add(hs);
+          attachUniversalHeadPiece(root,head,hs);
         }catch(e){console.warn('hairstyle attach failed',hp,e);}
       }
     }
     scene.add(root);
+    pendingRoot=null;
     UNI.scene=root;UNI.active=true;UNI.outfitGrp=null;
     UNI.gender=gen;
+    UNI.palmBones=['index_01_r','middle_01_r','ring_01_r','pinky_01_r'].map(n=>root.getObjectByName(n)).filter(Boolean);
+    UNI.gripPose=buildUniversalGripPose(root,clips);
     mixer=new THREE.AnimationMixer(root);
     UNI.acts={};for(const n in clips){try{UNI.acts[n]=mixer.clipAction(clips[n]);}catch(e){}}
     UNI.cur=null;UNI.base=null;uniPlay('Idle_Loop',false);UNI.base='Idle_Loop';
     avatarReady=true;
-    renderer.compile(scene,camera);
     try{buildOutfitRow();}catch(e){}
     currentOutfit='';
     if(hc&&(hc.persona||hc.name)){
@@ -1334,8 +1410,11 @@ async function loadUniversalHero(hc){
     }
     attachGear();applyEnchant(GEAR.tier);try{applyPremiumPresentation();}catch(e){}
     markPicks();
-  }catch(e){showErr('Universal hero failed: '+(e.message||e));}
-  loadBox.style.display='none';
+  }catch(e){
+    if(pendingRoot)disposeObject3D(pendingRoot);
+    if(my===UNI.token&&loadToken===heroLoadToken)showErr('Universal hero failed: '+(e.message||e));
+  }
+  if(loadToken===heroLoadToken)loadBox.style.display='none';
 }
 const GEAR_DEFS={
   // Synced from Placement Lab v4. `adjustPos` is applied after the app's raw-hand
@@ -1353,7 +1432,7 @@ const GEAR_DEFS={
   pickaxe_bronze:{url:'gear_pickaxe_bronze.glb',len:0.72,pos:[0.01,0.02,0.04],rot:[-Math.PI/2,0,0],gripY:0.02,adjustPos:[0.02,0,-0.03],adjustRot:[0,0,0],arm:[-4,0,14,0,0,0,0,0,0]},
   shield_wooden:{url:'gear_shield_wooden.glb',len:0.55,pos:[0.01,0.02,0.04],rot:[-Math.PI/2,0,0],gripY:0.0,adjustPos:[0,0,0],adjustRot:[0,0,0],arm:[0,0,0,0,0,0,0,0,0]}
 };
-const GEAR={id:null,tier:0,socket:null,model:null,glow:null,parts:null,mats:[],accent:'#2DD4BF',burstT:-9,ready:false};
+const GEAR={id:null,tier:0,socket:null,model:null,glow:null,parts:null,mats:[],accent:'#2DD4BF',burstT:-9,ready:false,token:0,off:null,uniOff:null,uniGrip:null};
 var _glowTex=null;
 function glowTex(){
   if(_glowTex)return _glowTex;
@@ -1361,19 +1440,20 @@ function glowTex(){
   const g=cv.getContext('2d');const gr=g.createRadialGradient(64,64,4,64,64,64);
   gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.35,'rgba(255,255,255,0.55)');gr.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle=gr;g.fillRect(0,0,128,128);
-  _glowTex=new THREE.CanvasTexture(cv);return _glowTex;
+  _glowTex=new THREE.CanvasTexture(cv);_glowTex.userData.animacyShared=true;return _glowTex;
 }
 async function equipGear(id){
-  GEAR.id=GEAR_DEFS[id]?id:null;
+  const token=++GEAR.token,gearId=GEAR_DEFS[id]?id:null;GEAR.id=gearId;
   try{localStorage.setItem('an_gear',GEAR.id||'');}catch(e){}
-  if(GEAR.socket){GEAR.socket.removeFromParent();GEAR.socket=null;}
-  GEAR.model=null;GEAR.glow=null;GEAR.parts=null;GEAR.mats=[];GEAR.ready=false;
+  if(GEAR.socket){GEAR.socket.removeFromParent();disposeObject3D(GEAR.socket);GEAR.socket=null;}
+  GEAR.model=null;GEAR.glow=null;GEAR.parts=null;GEAR.mats=[];GEAR.ready=false;GEAR.off=null;GEAR.uniOff=null;GEAR.uniGrip=null;
   applyGripPose(false); // open the hand again
   markPicks();
-  if(!GEAR.id)return;
+  if(!gearId)return;
   try{
-    const def=GEAR_DEFS[GEAR.id];
+    const def=GEAR_DEFS[gearId];
     const g=await new GLTFLoader().loadAsync(def.url);
+    if(token!==GEAR.token){disposeObject3D(g.scene);return;}
     const model=g.scene;
     const size=new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
     model.scale.setScalar(def.len/Math.max(size.x,size.y,size.z,0.001));
@@ -1391,8 +1471,8 @@ async function equipGear(id){
     const NP=14,tp=new Float32Array(NP*3);
     for(let i=0;i<NP;i++){tp[i*3]=(Math.random()-0.5)*0.14;tp[i*3+1]=mid.y+(Math.random()-0.5)*def.len*0.7;tp[i*3+2]=(Math.random()-0.5)*0.14;}
     const tg=new THREE.BufferGeometry();tg.setAttribute('position',new THREE.BufferAttribute(tp,3));
-    GEAR.parts=new THREE.Points(tg,new THREE.PointsMaterial({size:0.022,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
-    socket.add(GEAR.parts);
+    const parts=new THREE.Points(tg,new THREE.PointsMaterial({size:0.022,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    socket.add(parts);
     // scene-root socket that matrix-follows the hand bone every frame
     // (parenting under VRM bones proved unreliable; this pattern always renders)
     GEAR.off=new THREE.Matrix4().compose(
@@ -1404,13 +1484,18 @@ async function equipGear(id){
         new THREE.Vector3().fromArray(def.adjustPos||[0,0,0]),
         new THREE.Quaternion().setFromEuler(new THREE.Euler(...(def.adjustRot||[0,0,0]))),
         new THREE.Vector3(1,1,1)));
+    GEAR.uniOff=new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(def.rot[0],def.rot[1],def.rot[2]))
+      .multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...(def.adjustRot||[0,0,0]))));
+    // Authored gripY identifies the handle point; universal rigs pin that point
+    // to the measured palm center instead of reusing VRM wrist offsets.
+    GEAR.uniGrip=new THREE.Vector3(0,-(def.gripY||0),0);
     socket.matrixAutoUpdate=false;
     scene.add(socket);
-    GEAR.model=model;GEAR.glow=spr;
+    GEAR.model=model;GEAR.glow=spr;GEAR.parts=parts;
     attachGear();applyEnchant(GEAR.tier);
     GEAR.socket=socket; // assign last — the update loop guards on it
     GEAR.ready=true;
-  }catch(e){console.warn('gear load failed',e);}
+  }catch(e){if(token===GEAR.token)console.warn('gear load failed',e);}
 }
 function attachGear(){
   if(UNI.active&&UNI.scene){GEAR.hand=UNI.scene.getObjectByName('hand_r')||null;return;}
@@ -1453,13 +1538,29 @@ function applyWeaponArmPose(){
   }
 }
 const EM_T=[0,0.35,0.6,0.95],GS_T=[0,0.16,0.24,0.34],GO_T=[0,0.32,0.5,0.72];
+const UNI_HAND_POS=new THREE.Vector3(),UNI_HAND_QUAT=new THREE.Quaternion(),UNI_HAND_SCALE=new THREE.Vector3(),UNI_UNIT_SCALE=new THREE.Vector3(1,1,1);
+const UNI_PALM=new THREE.Vector3(),UNI_KNUCKLES=new THREE.Vector3(),UNI_BONE_POS=new THREE.Vector3(),UNI_GRIP_WORLD=new THREE.Vector3();
+function universalPalmWorld(out){
+  out.copy(UNI_HAND_POS);
+  if(!UNI.palmBones.length)return out;
+  UNI_KNUCKLES.set(0,0,0);
+  for(const bone of UNI.palmBones){bone.getWorldPosition(UNI_BONE_POS);UNI_KNUCKLES.add(UNI_BONE_POS);}
+  UNI_KNUCKLES.multiplyScalar(1/UNI.palmBones.length);
+  return out.lerp(UNI_KNUCKLES,0.55);
+}
 function updateGear(dt,now){
   try{
     if(!GEAR.socket||!GEAR.off||!GEAR.hand)return;
     GEAR.hand.updateWorldMatrix(true,false);
-    GEAR.socket.matrix.copy(GEAR.hand.matrixWorld);
-    if(UNI.active)GEAR.socket.matrix.multiply(UNI_GEAR_FIX); // UE hand_r axes: weapons sat backwards
-    GEAR.socket.matrix.multiply(GEAR.off);
+    if(UNI.active&&GEAR.uniOff&&GEAR.uniGrip){
+      GEAR.hand.matrixWorld.decompose(UNI_HAND_POS,UNI_HAND_QUAT,UNI_HAND_SCALE);
+      GEAR.socket.matrix.compose(UNI_HAND_POS,UNI_HAND_QUAT,UNI_UNIT_SCALE).multiply(UNI_GEAR_FIX).multiply(GEAR.uniOff);
+      universalPalmWorld(UNI_PALM);
+      UNI_GRIP_WORLD.copy(GEAR.uniGrip).applyMatrix4(GEAR.socket.matrix);
+      GEAR.socket.matrix.elements[12]+=UNI_PALM.x-UNI_GRIP_WORLD.x;
+      GEAR.socket.matrix.elements[13]+=UNI_PALM.y-UNI_GRIP_WORLD.y;
+      GEAR.socket.matrix.elements[14]+=UNI_PALM.z-UNI_GRIP_WORLD.z;
+    }else GEAR.socket.matrix.copy(GEAR.hand.matrixWorld).multiply(GEAR.off);
     if(!GEAR.ready||!GEAR.glow)return;
     const t=GEAR.tier;
     const k=Math.max(0,1-(now-GEAR.burstT)/1.1),kk=k*k;
@@ -1613,9 +1714,11 @@ document.getElementById('micBtn').addEventListener('click',()=>{if(Live.micOn)Li
 
 /* ================== main loop ================== */
 const clock=new THREE.Clock();
-let fpsAcc=0,fpsN=0,lastFps=perf();
+let fpsAcc=0,fpsN=0,lastFps=perf(),lastQualityShift=-99;
 function loop(){
-  const rawDt=clock.getDelta(),dt=suspended?0:Math.min(rawDt,1/30),now=perf();
+  const rawDt=clock.getDelta(),now=perf();
+  if(suspended){requestAnimationFrame(loop);return;}
+  const dt=Math.min(rawDt,1/20); // preserve animation time at lower frame rates without giant physics steps
   updateWorld(dt,now);
   const transitioning=now<transitionUntil;
   if(!speaking&&!transitioning&&!activeGestures.length&&currentClipName===curBaseId&&now>nextIdleSwap&&nextIdleSwap>0){
@@ -1643,7 +1746,6 @@ function loop(){
     applyBreathingPose(now);
     applyWeaponArmPose();
     applyGripPose(GEAR.ready&&!!GEAR.id);
-    updateGear(dt,now);
     vrm.scene.position.y=hopY;
     vrm.scene.rotation.y=baseYaw+spinY;
     vrm.scene.rotation.z=leanZ;
@@ -1661,6 +1763,7 @@ function loop(){
       else if(speaking)em.setValue('aa',0.15+0.15*Math.sin(now*16));
     }
     vrm.update(dt);
+    updateGear(dt,now); // follow the final current-frame hand/root transform
   }
   else if(UNI.active&&UNI.scene){
     const wantBase=speaking?'Idle_Talking_Loop':'Idle_Loop';
@@ -1668,10 +1771,21 @@ function loop(){
     else if(!UNI.oneshotUntil&&UNI.base!==wantBase&&UNI.acts[wantBase]){uniPlay(wantBase,false);UNI.base=wantBase;}
     UNI.scene.rotation.y=UNI.baseYaw+spinY;
     UNI.scene.rotation.z=leanZ;
+    applyUniversalGripPose();
     updateGear(dt,now);
   }
   controls.update();
   renderer.render(scene,camera);
+  fpsAcc+=rawDt;fpsN++;
+  if(now-lastFps>=2.5){
+    const measured=fpsN/Math.max(fpsAcc,.001),fpsNode=document.getElementById('fps');
+    if(fpsNode)fpsNode.textContent=Math.round(measured)+' fps';
+    if(measured<43&&renderDpr>1.01&&now-lastQualityShift>8){
+      renderDpr=Math.max(1,Math.round((renderDpr-0.15)*100)/100);lastQualityShift=now;resize();
+      console.info('[Animacy quality] reduced render scale to',renderDpr,'after',Math.round(measured),'fps');
+    }
+    fpsAcc=0;fpsN=0;lastFps=now;
+  }
   requestAnimationFrame(loop);
 }
 
@@ -1837,7 +1951,7 @@ window.addEventListener('pagehide',()=>{suspended=true;});
 window.addEventListener('pageshow',()=>{suspended=false;clock.stop();clock.start();transitionUntil=0;vrm?.springBoneManager?.reset?.();});
 window.addEventListener('webglcontextlost',e=>{e.preventDefault();suspended=true;showErr('Graphics paused. Restoring…');});
 window.addEventListener('webglcontextrestored',()=>{suspended=false;errBox.style.display='none';renderer.compile(scene,camera);});
-const APP_BUILD='2026.07.13-ai-wardrobe-v9';
+const APP_BUILD='2026.07.15-hero-pet-stability-v10';
 console.info('[Animacy build]',APP_BUILD);
 /* preview: service worker disabled */
 
@@ -1854,7 +1968,6 @@ const skyQ=Q.get('sky'); if(skyQ&&SKY_CFG[skyQ])setSky(skyQ);
 const grdQ=Q.get('ground'); if(grdQ&&GROUND_CFG[grdQ])setGround(grdQ);
 loadAppSharedDefaults(); /* preview: lab sync off */
 if(Q.get('zoom')){const z=clamp(parseFloat(Q.get('zoom'))||CAMERA_DEFAULT_DISTANCE,controls.minDistance,controls.maxDistance);camera.position.set(0,1.2,z);controls.update();}
-loadPet(); // non-blocking — dragon appears when ready
 detectHeroModels().then(()=>{
 if(!CHARACTERS.length){
   loadBox.style.display='none';
