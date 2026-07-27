@@ -1,6 +1,7 @@
 {
   "name": "skurt",
   "version": "0.1.0",
+  "description": "Temporary lock generation manifest for Skurt",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^8.4.2",
